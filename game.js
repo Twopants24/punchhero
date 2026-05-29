@@ -106,6 +106,7 @@ const hint2 = document.getElementById("hint-2");
 const hintQ = document.getElementById("hint-q");
 const hintC = document.getElementById("hint-c");
 const enemyHud = document.getElementById("enemy-hud");
+const enemyHudName = document.getElementById("enemy-hud-name");
 const pauseMenu = document.getElementById("pause-menu");
 const controlsModal = document.getElementById("controls-modal");
 const resumeButton = document.getElementById("resume-button");
@@ -307,6 +308,9 @@ function applyCpuClass() {
 function rollCpuClass() {
   cpuClass = Math.random() < 0.5 ? "mage" : "warrior";
   applyCpuClass();
+  if (enemyHudName) {
+    enemyHudName.textContent = cpuClass === "mage" ? "CPU Mage" : "CPU Warrior";
+  }
 }
 
 function showGameOver(title, text) {
@@ -494,6 +498,9 @@ function updateEnemyHud() {
   }
 
   enemyHud.hidden = false;
+  if (enemyHudName) {
+    enemyHudName.textContent = cpuClass === "mage" ? "CPU Mage" : "CPU Warrior";
+  }
   const x = (world.x * 0.5 + 0.5) * window.innerWidth;
   const y = (-world.y * 0.5 + 0.5) * window.innerHeight;
   enemyHud.style.left = `${x}px`;
@@ -2027,11 +2034,11 @@ function updateCpu(dt, elapsed) {
     distance <= 2.8 &&
     playerThreatening &&
     forward.dot(planar) > 0.38 &&
-    Math.random() < 0.09
+    (state.isCometDashing || state.isSpinning || state.isAvalanching || Math.random() < 0.32)
   ) {
     cpuState.isBlocking = true;
     cpuState.blockTimer = cpuState.blockDuration;
-    cpuState.blockCooldown = 1.5;
+    cpuState.blockCooldown = 1.15;
     cpuState.aiBlockWindow = 0.45;
   }
 
@@ -2069,23 +2076,23 @@ function updateCpu(dt, elapsed) {
     cpuState.stamina >= 20;
 
   if (canUseSpecial) {
-    if (distance <= 2.4 && cpuState.spinCooldown <= 0 && Math.random() < 0.012) {
+    if (distance <= 2.35 && cpuState.spinCooldown <= 0 && cpuState.aiPunchCooldown > 0.15) {
       cpuState.isSpinning = true;
       cpuState.spinTimer = cpuState.spinDuration;
       cpuState.spinCooldown = 1.9;
       cpuState.spinHasHit = false;
       cpuState.aiSpecialCooldown = 1.4;
     } else if (cpuClass === "mage") {
-      if (distance <= 3.4 && cpuState.fireballCooldown <= 0 && cpuState.stamina >= 18 && Math.random() < 0.013) {
+      if (distance >= 2.15 && distance <= 3.7 && cpuState.fireballCooldown <= 0 && cpuState.stamina >= 18) {
         cpuState.stamina = Math.max(0, cpuState.stamina - 18);
         castCpuArcaneBurst();
         cpuState.aiSpecialCooldown = 1.5;
-      } else if (distance <= 3.5 && cpuState.thunderCooldown <= 0 && cpuState.stamina >= 24 && Math.random() < 0.009) {
+      } else if (distance <= 2.9 && cpuState.thunderCooldown <= 0 && cpuState.stamina >= 24) {
         cpuState.stamina = Math.max(0, cpuState.stamina - 24);
         castCpuThunderBurst();
         cpuState.aiSpecialCooldown = 2.2;
       }
-    } else if (distance <= 3.1 && cpuState.avalancheCooldown <= 0 && cpuState.stamina >= 26 && Math.random() < 0.012) {
+    } else if (distance <= 2.95 && cpuState.avalancheCooldown <= 0 && cpuState.stamina >= 26) {
       cpuState.stamina = Math.max(0, cpuState.stamina - 26);
       cpuState.isAvalanching = true;
       cpuState.avalancheTimer = cpuState.avalancheDuration;
@@ -2094,7 +2101,7 @@ function updateCpu(dt, elapsed) {
       cpuState.isPunching = false;
       cpuState.punchTimer = 0;
       cpuState.aiSpecialCooldown = 2;
-    } else if (distance > 2.2 && distance <= 5.2 && cpuState.cometDashCooldown <= 0 && cpuState.stamina >= 32 && Math.random() < 0.01) {
+    } else if (distance > 2.5 && distance <= 5.4 && cpuState.cometDashCooldown <= 0 && cpuState.stamina >= 32) {
       cpuState.stamina = Math.max(0, cpuState.stamina - 32);
       cpuState.isCometDashing = true;
       cpuState.cometDashTimer = cpuState.cometDashDuration;
