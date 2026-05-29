@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Punch Hero</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <div class="start-menu" id="start-menu">
+      <div class="start-menu__card">
+        <div class="start-menu__eyebrow">Local Arena Fighter</div>
+        <div class="start-menu__title">Punch Hero</div>
+        <div class="start-menu__text">Pick a fighter, jump in, and outplay the blue CPU.</div>
+        <div class="class-select" id="class-select">
+          <button class="class-select__button class-select__button--active" data-class="warrior" type="button">
+            <span class="class-select__name">Warrior</span>
+            <span class="class-select__desc">Brawler specials and heavy melee.</span>
+          </button>
+          <button class="class-select__button" data-class="mage" type="button">
+            <span class="class-select__name">Mage</span>
+            <span class="class-select__desc">Spellfighter with fireball and thunder.</span>
+          </button>
+        </div>
+        <div class="mode-select" id="mode-select">
+          <button class="mode-select__button mode-select__button--active" data-mode="versus" type="button">
+            Versus
+          </button>
+          <button class="mode-select__button" data-mode="training" type="button">
+            Training
+          </button>
+        </div>
+        <button class="start-menu__button" id="play-button" type="button">Play</button>
+      </div>
+    </div>
+    <div class="fight-hud">
+      <div class="fight-hud__player">
+        <div class="fight-hud__name">You</div>
+        <div class="fight-hud__bar fight-hud__bar--health">
+          <div class="health__fill health__fill--player" id="player-health-fill"></div>
+        </div>
+        <div class="fight-hud__label">Stamina</div>
+        <div class="fight-hud__bar fight-hud__bar--stamina">
+          <div class="stamina__fill" id="stamina-fill"></div>
+        </div>
+      </div>
+      <div class="fight-hud__status" id="lock-status">Camera: Hold click and drag to look</div>
+    </div>
+    <div class="enemy-hud" id="enemy-hud" hidden>
+      <div class="enemy-hud__name">CPU</div>
+      <div class="enemy-hud__bar">
+        <div class="health__fill health__fill--cpu" id="cpu-health-fill"></div>
+      </div>
+    </div>
+    <div class="pause-menu" id="pause-menu" hidden>
+      <div class="pause-menu__card">
+        <div class="pause-menu__title">Paused</div>
+        <button class="pause-menu__button" id="resume-button" type="button">Resume</button>
+        <button class="pause-menu__button" id="controls-button" type="button">Controls</button>
+        <button class="pause-menu__button pause-menu__button--ghost" id="start-menu-button" type="button">Start Menu</button>
+      </div>
+    </div>
+    <div class="controls-modal" id="controls-modal" hidden>
+      <div class="controls-modal__card">
+        <div class="controls-modal__title">Controls</div>
+        <div class="controls-modal__list">
+          <div>Move: `WASD` or Arrow Keys</div>
+          <div>Jump: `Space`</div>
+          <div>Run: Hold `Shift`</div>
+          <div>Look: Hold mouse button and drag</div>
+          <div id="hint-e">Attack: E</div>
+          <div id="hint-q">Spin Attack: Q</div>
+          <div id="hint-c">Timed Block: C</div>
+          <div id="hint-1">Avalanche: 1</div>
+          <div id="hint-2">Comet Dash: 2</div>
+          <div>Pause: `Esc`</div>
+        </div>
+        <button class="pause-menu__button" id="close-controls-button" type="button">Close</button>
+      </div>
+    </div>
+    <div class="game-over" id="game-over" hidden>
+      <div class="game-over__card">
+        <div class="game-over__title" id="game-over-title">Game Over</div>
+        <div class="game-over__text" id="game-over-text">Press R to restart</div>
+      </div>
+    </div>
+    <div class="countdown" id="countdown" hidden>3</div>
+    <div class="crosshair" aria-hidden="true"></div>
+    <script type="module" src="./game.js"></script>
+  </body>
+</html>
