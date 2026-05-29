@@ -141,6 +141,7 @@ const fireballs = [];
 const thunderBursts = [];
 let selectedClass = "warrior";
 let selectedMode = "versus";
+let cpuClass = "warrior";
 
 const dirtColors = [0x8f6b42, 0x6f5338, 0xb08a59, 0xc9ad76];
 
@@ -193,6 +194,8 @@ function createActorState() {
     spinDuration: 0.62,
     spinCooldown: 0,
     spinHasHit: false,
+    aiSpecialCooldown: 0,
+    aiBlockWindow: 0,
     walkCycle: 0,
   };
 }
@@ -285,6 +288,27 @@ function applySelectedClass() {
   updateHudForClass();
 }
 
+function applyCpuClass() {
+  const isMage = cpuClass === "mage";
+  cpuCharacter.bodyMat.color.setHex(isMage ? 0x4679ff : 0x4e7dff);
+  cpuCharacter.darkMat.color.setHex(isMage ? 0x1a1b59 : 0x162347);
+  cpuCharacter.gloveMat.color.setHex(isMage ? 0xb5d6ff : 0x0d1020);
+  cpuCharacter.mouthMat.color.setHex(isMage ? 0x6a84d8 : 0x445a9a);
+  cpuCharacter.hair.visible = !isMage;
+  cpuCharacter.mageHat.visible = isMage;
+  cpuCharacter.mageBrim.visible = isMage;
+  cpuCharacter.cape.visible = isMage;
+  cpuCharacter.robeFront.visible = isMage;
+  cpuCharacter.windRingLow.material.color.setHex(isMage ? 0xb9b6ff : 0xc9e3ff);
+  cpuCharacter.windRingHigh.material.color.setHex(isMage ? 0xb9b6ff : 0xc9e3ff);
+  cpuCharacter.windSlash.material.color.setHex(isMage ? 0xe7d8ff : 0xc9e3ff);
+}
+
+function rollCpuClass() {
+  cpuClass = Math.random() < 0.5 ? "mage" : "warrior";
+  applyCpuClass();
+}
+
 function showGameOver(title, text) {
   state.gameOver = true;
   state.paused = false;
@@ -300,6 +324,7 @@ function startGame() {
   state.paused = false;
   state.countdownValue = 3;
   state.countdownTimer = 0;
+  rollCpuClass();
   if (startMenu) startMenu.hidden = true;
   if (pauseMenu) pauseMenu.hidden = true;
   if (controlsModal) controlsModal.hidden = true;
@@ -381,6 +406,8 @@ function resetActorState(actorState, position, facing = 0) {
   actorState.spinTimer = 0;
   actorState.spinCooldown = 0;
   actorState.spinHasHit = false;
+  actorState.aiSpecialCooldown = 0;
+  actorState.aiBlockWindow = 0;
   actorState.walkCycle = 0;
   position.y = 0;
 }
@@ -395,6 +422,7 @@ function restartGame() {
   cpuCharacter.root.rotation.y = cpuState.facing;
   cpuState.aiJumpCooldown = 1.5;
   cpuState.aiPunchCooldown = 0.3;
+  rollCpuClass();
   state.gameOver = false;
   state.paused = false;
   state.roundActive = false;
@@ -438,6 +466,7 @@ function returnToStartMenu() {
   cpuCharacter.root.position.copy(cpuSpawn);
   character.root.rotation.y = state.facing;
   cpuCharacter.root.rotation.y = cpuState.facing;
+  rollCpuClass();
   if (gameOver) gameOver.hidden = true;
   if (pauseMenu) pauseMenu.hidden = true;
   if (controlsModal) controlsModal.hidden = true;
@@ -1553,6 +1582,8 @@ function updateActor(actor, actorState, input, faceTarget, dt, elapsed) {
   actorState.skySmashProcFlash = Math.max(0, actorState.skySmashProcFlash - dt);
   actorState.spinCooldown = Math.max(0, actorState.spinCooldown - dt);
   actorState.hitCooldown = Math.max(0, actorState.hitCooldown - dt);
+  actorState.aiSpecialCooldown = Math.max(0, actorState.aiSpecialCooldown - dt);
+  actorState.aiBlockWindow = Math.max(0, actorState.aiBlockWindow - dt);
 
   if (usingSkySmash && !actorState.skySmashDive && actorState.verticalVelocity <= 0 && actorState.skySmashHoverTimer <= 0) {
     actorState.skySmashDive = true;
@@ -1574,6 +1605,9 @@ function updateActor(actor, actorState, input, faceTarget, dt, elapsed) {
     if (actorState.avalancheHitTimer <= 0 && actor === character) {
       actorState.avalancheHitTimer = 0.038;
       tryAvalanche();
+    } else if (actorState.avalancheHitTimer <= 0 && actor === cpuCharacter) {
+      actorState.avalancheHitTimer = 0.038;
+      tryCpuAvalanche();
     }
     if (actorState.avalancheTimer <= 0) {
       actorState.isAvalanching = false;
@@ -1587,6 +1621,8 @@ function updateActor(actor, actorState, input, faceTarget, dt, elapsed) {
     actorState.cometDashTimer -= dt;
     if (actor === character && actorState.cometDashTimer <= actorState.cometDashDuration * 0.65) {
       tryCometDash();
+    } else if (actor === cpuCharacter && actorState.cometDashTimer <= actorState.cometDashDuration * 0.65) {
+      tryCpuCometDash();
     }
     if (actorState.cometDashTimer <= 0) {
       if (actor === character && !actorState.cometDashHit) {
@@ -1594,6 +1630,10 @@ function updateActor(actor, actorState, input, faceTarget, dt, elapsed) {
         actorState.stunTimer = Math.max(actorState.stunTimer, 0.55);
         actorState.velocity.multiplyScalar(0.2);
         updateLockStatus("You tripped!");
+      } else if (actor === cpuCharacter && !actorState.cometDashHit) {
+        actorState.tripTimer = Math.max(actorState.tripTimer, 0.9);
+        actorState.stunTimer = Math.max(actorState.stunTimer, 0.45);
+        actorState.velocity.multiplyScalar(0.2);
       } else {
         updateLockStatus("Camera: Hold click and drag to look");
       }
@@ -1615,6 +1655,8 @@ function updateActor(actor, actorState, input, faceTarget, dt, elapsed) {
     actorState.spinTimer -= dt;
     if (actorState.spinTimer <= actorState.spinDuration * 0.45 && actor === character) {
       trySpinAttack();
+    } else if (actorState.spinTimer <= actorState.spinDuration * 0.45 && actor === cpuCharacter) {
+      tryCpuSpinAttack();
     }
     if (actorState.spinTimer <= 0) {
       actorState.isSpinning = false;
@@ -1778,6 +1820,178 @@ function tryCpuPunch() {
   return applyHit(cpuCharacter, character, state, 10);
 }
 
+function tryCpuSpinAttack() {
+  if (cpuState.spinHasHit) return;
+  const toPlayer = character.root.position.clone().sub(cpuCharacter.root.position);
+  if (toPlayer.length() <= 2.75) {
+    applyHit(cpuCharacter, character, state, 18);
+  }
+  cpuState.spinHasHit = true;
+}
+
+function castCpuArcaneBurst() {
+  cpuState.fireballCooldown = 1.1;
+  cpuState.isPunching = true;
+  cpuState.punchTimer = cpuState.punchDuration * 0.6;
+
+  const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(cpuCharacter.root.quaternion).normalize();
+  const burstCenter = cpuCharacter.root.position.clone().add(new THREE.Vector3(0, 1.55, 0)).addScaledVector(forward, 1.7);
+  const toPlayer = character.root.position.clone().sub(cpuCharacter.root.position);
+  const distance = toPlayer.length();
+  const planar = toPlayer.clone();
+  planar.y = 0;
+  if (distance <= 3.55 && planar.lengthSq() > 0.0001) {
+    planar.normalize();
+    if (forward.dot(planar) >= 0.52) {
+      const landed = applyHit(cpuCharacter, character, state, 24);
+      if (landed) {
+        state.velocity.addScaledVector(planar, 3.2);
+        state.stunTimer = Math.max(state.stunTimer, 0.55);
+      }
+    }
+  }
+
+  const root = new THREE.Group();
+  const core = new THREE.Mesh(
+    new THREE.SphereGeometry(0.34, 18, 18),
+    new THREE.MeshBasicMaterial({ color: 0x78b2ff, transparent: true, opacity: 0.82 }),
+  );
+  const flash = new THREE.Mesh(
+    new THREE.SphereGeometry(0.72, 18, 18),
+    new THREE.MeshBasicMaterial({ color: 0xe5efff, transparent: true, opacity: 0.42 }),
+  );
+  const ringA = new THREE.Mesh(
+    new THREE.TorusGeometry(0.66, 0.08, 10, 30),
+    new THREE.MeshBasicMaterial({ color: 0xc7deff, transparent: true, opacity: 0.72 }),
+  );
+  ringA.rotation.y = Math.PI / 2;
+  const ringB = new THREE.Mesh(
+    new THREE.TorusGeometry(0.44, 0.06, 10, 28),
+    new THREE.MeshBasicMaterial({ color: 0x9fc9ff, transparent: true, opacity: 0.6 }),
+  );
+  ringB.rotation.x = Math.PI / 2;
+  const slash = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.18, 0.78, 0.18, 18, 1, true),
+    new THREE.MeshBasicMaterial({ color: 0xecf4ff, transparent: true, opacity: 0.52 }),
+  );
+  slash.rotation.z = Math.PI / 2;
+  slash.rotation.x = Math.PI / 2;
+  root.add(core);
+  root.add(flash);
+  root.add(ringA);
+  root.add(ringB);
+  root.add(slash);
+  root.position.copy(burstCenter);
+  root.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, -1), forward);
+  scene.add(root);
+  fireballs.push({
+    type: "arcaneBurst",
+    root,
+    core,
+    flash,
+    ringA,
+    ringB,
+    slash,
+    forward,
+    speed: 2.8,
+    life: 0.34,
+    maxLife: 0.34,
+  });
+}
+
+function castCpuThunderBurst() {
+  cpuState.thunderCooldown = 2.8;
+  cpuState.blockEffectTimer = 0.34;
+  const offsets = [
+    new THREE.Vector3(1.8, 0, 0.4),
+    new THREE.Vector3(-1.5, 0, -0.8),
+    new THREE.Vector3(0.3, 0, 1.9),
+    new THREE.Vector3(-0.4, 0, -2.1),
+    new THREE.Vector3(2.1, 0, -1.5),
+  ];
+
+  offsets.forEach((offset, index) => {
+    const root = new THREE.Group();
+    const bolt = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.06, 0.15, 4.8, 6),
+      new THREE.MeshBasicMaterial({ color: 0xe9f7ff }),
+    );
+    bolt.position.y = 2.4;
+    bolt.rotation.z = (Math.random() - 0.5) * 0.35;
+    root.add(bolt);
+
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(0.35, 0.9, 20),
+      new THREE.MeshBasicMaterial({ color: 0x8eb8ff, transparent: true, opacity: 0.72, side: THREE.DoubleSide }),
+    );
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = 0.06;
+    root.add(ring);
+
+    root.position.copy(cpuCharacter.root.position).add(offset);
+    scene.add(root);
+    thunderBursts.push({
+      root,
+      ring,
+      life: 0.32 + index * 0.015,
+    });
+  });
+
+  const playerDistance = character.root.position.distanceTo(cpuCharacter.root.position);
+  if (playerDistance <= 3.4) {
+    const landed = applyHit(cpuCharacter, character, state, 24);
+    if (landed) {
+      state.stunTimer = Math.max(state.stunTimer, 0.72);
+      const knockback = character.root.position.clone().sub(cpuCharacter.root.position);
+      knockback.y = 0;
+      if (knockback.lengthSq() > 0.0001) {
+        knockback.normalize();
+        state.velocity.addScaledVector(knockback, 3.2);
+      }
+    }
+  }
+}
+
+function tryCpuAvalanche() {
+  const toPlayer = character.root.position.clone().sub(cpuCharacter.root.position);
+  const distance = toPlayer.length();
+  const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(cpuCharacter.root.quaternion).normalize();
+  if (distance <= 3.05 && forward.dot(toPlayer.normalize()) >= 0.42) {
+    const hitLanded = applyHit(cpuCharacter, character, state, 10);
+    if (hitLanded) {
+      const knockback = character.root.position.clone().sub(cpuCharacter.root.position);
+      knockback.y = 0;
+      if (knockback.lengthSq() > 0.0001) {
+        knockback.normalize();
+        state.velocity.addScaledVector(knockback, 2.2);
+      }
+      state.stunTimer = Math.max(state.stunTimer, 0.5);
+    }
+  }
+}
+
+function tryCpuCometDash() {
+  if (cpuState.cometDashHit) return;
+
+  const toPlayer = character.root.position.clone().sub(cpuCharacter.root.position);
+  const distance = toPlayer.length();
+  const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(cpuCharacter.root.quaternion).normalize();
+  if (distance <= 2.9 && forward.dot(toPlayer.normalize()) >= 0.42) {
+    const hitLanded = applyHit(cpuCharacter, character, state, 34);
+    if (hitLanded) {
+      const knockback = character.root.position.clone().sub(cpuCharacter.root.position);
+      knockback.y = 0;
+      if (knockback.lengthSq() > 0.0001) {
+        knockback.normalize();
+        state.velocity.addScaledVector(knockback, 5.8);
+      }
+      state.stunTimer = Math.max(state.stunTimer, 1.1);
+      state.knockdownTimer = Math.max(state.knockdownTimer, 1.2);
+      cpuState.cometDashHit = true;
+    }
+  }
+}
+
 function updateCpu(dt, elapsed) {
   if (selectedMode === "training") return;
   if (cpuState.stunTimer > 0) {
@@ -1799,6 +2013,27 @@ function updateCpu(dt, elapsed) {
   const faceTarget = Math.atan2(-planar.x, -planar.z);
   const forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), cpuState.facing);
   const right = new THREE.Vector3().crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize();
+
+  const playerThreatening =
+    state.punchTimer > 0.08 ||
+    state.isSpinning ||
+    state.isAvalanching ||
+    state.isCometDashing ||
+    state.skySmashDive;
+  if (
+    cpuState.blockCooldown <= 0 &&
+    !cpuState.isBlocking &&
+    cpuState.aiBlockWindow <= 0 &&
+    distance <= 2.8 &&
+    playerThreatening &&
+    forward.dot(planar) > 0.38 &&
+    Math.random() < 0.09
+  ) {
+    cpuState.isBlocking = true;
+    cpuState.blockTimer = cpuState.blockDuration;
+    cpuState.blockCooldown = 1.5;
+    cpuState.aiBlockWindow = 0.45;
+  }
 
   let desiredMove = new THREE.Vector3();
   if (distance > 1.9) {
@@ -1822,6 +2057,57 @@ function updateCpu(dt, elapsed) {
 
   cpuState.isRunning =
     distance > 4.4 && cpuState.isGrounded && desiredMove.lengthSq() > 0;
+
+  const canUseSpecial =
+    cpuState.aiSpecialCooldown <= 0 &&
+    !cpuState.isBlocking &&
+    !cpuState.isPunching &&
+    !cpuState.isSpinning &&
+    !cpuState.isAvalanching &&
+    !cpuState.isCometDashing &&
+    cpuState.isGrounded &&
+    cpuState.stamina >= 20;
+
+  if (canUseSpecial) {
+    if (distance <= 2.4 && cpuState.spinCooldown <= 0 && Math.random() < 0.012) {
+      cpuState.isSpinning = true;
+      cpuState.spinTimer = cpuState.spinDuration;
+      cpuState.spinCooldown = 1.9;
+      cpuState.spinHasHit = false;
+      cpuState.aiSpecialCooldown = 1.4;
+    } else if (cpuClass === "mage") {
+      if (distance <= 3.4 && cpuState.fireballCooldown <= 0 && cpuState.stamina >= 18 && Math.random() < 0.013) {
+        cpuState.stamina = Math.max(0, cpuState.stamina - 18);
+        castCpuArcaneBurst();
+        cpuState.aiSpecialCooldown = 1.5;
+      } else if (distance <= 3.5 && cpuState.thunderCooldown <= 0 && cpuState.stamina >= 24 && Math.random() < 0.009) {
+        cpuState.stamina = Math.max(0, cpuState.stamina - 24);
+        castCpuThunderBurst();
+        cpuState.aiSpecialCooldown = 2.2;
+      }
+    } else if (distance <= 3.1 && cpuState.avalancheCooldown <= 0 && cpuState.stamina >= 26 && Math.random() < 0.012) {
+      cpuState.stamina = Math.max(0, cpuState.stamina - 26);
+      cpuState.isAvalanching = true;
+      cpuState.avalancheTimer = cpuState.avalancheDuration;
+      cpuState.avalancheCooldown = 3.2;
+      cpuState.avalancheHitTimer = 0;
+      cpuState.isPunching = false;
+      cpuState.punchTimer = 0;
+      cpuState.aiSpecialCooldown = 2;
+    } else if (distance > 2.2 && distance <= 5.2 && cpuState.cometDashCooldown <= 0 && cpuState.stamina >= 32 && Math.random() < 0.01) {
+      cpuState.stamina = Math.max(0, cpuState.stamina - 32);
+      cpuState.isCometDashing = true;
+      cpuState.cometDashTimer = cpuState.cometDashDuration;
+      cpuState.cometDashCooldown = 2.8;
+      cpuState.cometDashHit = false;
+      cpuState.isPunching = false;
+      cpuState.punchTimer = 0;
+      cpuState.isAvalanching = false;
+      cpuState.avalancheTimer = 0;
+      cpuState.avalancheHitTimer = 0;
+      cpuState.aiSpecialCooldown = 2.1;
+    }
+  }
 
   if (cpuState.punchCooldown <= 0 && cpuState.aiPunchCooldown <= 0 && tryCpuPunch()) {
     cpuState.isPunching = true;
