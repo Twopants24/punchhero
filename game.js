@@ -143,6 +143,7 @@ const thunderBursts = [];
 let selectedClass = "warrior";
 let selectedMode = "versus";
 let cpuClass = "warrior";
+let cpuClassBag = [];
 
 const dirtColors = [0x8f6b42, 0x6f5338, 0xb08a59, 0xc9ad76];
 
@@ -291,22 +292,29 @@ function applySelectedClass() {
 
 function applyCpuClass() {
   const isMage = cpuClass === "mage";
-  cpuCharacter.bodyMat.color.setHex(isMage ? 0x4679ff : 0x4e7dff);
-  cpuCharacter.darkMat.color.setHex(isMage ? 0x1a1b59 : 0x162347);
-  cpuCharacter.gloveMat.color.setHex(isMage ? 0xb5d6ff : 0x0d1020);
-  cpuCharacter.mouthMat.color.setHex(isMage ? 0x6a84d8 : 0x445a9a);
+  cpuCharacter.bodyMat.color.setHex(isMage ? 0x895cff : 0x4e7dff);
+  cpuCharacter.darkMat.color.setHex(isMage ? 0x25124e : 0x162347);
+  cpuCharacter.gloveMat.color.setHex(isMage ? 0xe6d9ff : 0x0d1020);
+  cpuCharacter.mouthMat.color.setHex(isMage ? 0x6f59c5 : 0x445a9a);
   cpuCharacter.hair.visible = !isMage;
   cpuCharacter.mageHat.visible = isMage;
   cpuCharacter.mageBrim.visible = isMage;
   cpuCharacter.cape.visible = isMage;
   cpuCharacter.robeFront.visible = isMage;
-  cpuCharacter.windRingLow.material.color.setHex(isMage ? 0xb9b6ff : 0xc9e3ff);
-  cpuCharacter.windRingHigh.material.color.setHex(isMage ? 0xb9b6ff : 0xc9e3ff);
-  cpuCharacter.windSlash.material.color.setHex(isMage ? 0xe7d8ff : 0xc9e3ff);
+  cpuCharacter.windRingLow.material.color.setHex(isMage ? 0xd6b7ff : 0xc9e3ff);
+  cpuCharacter.windRingHigh.material.color.setHex(isMage ? 0xd6b7ff : 0xc9e3ff);
+  cpuCharacter.windSlash.material.color.setHex(isMage ? 0xf2ddff : 0xc9e3ff);
+}
+
+function refillCpuClassBag() {
+  cpuClassBag = Math.random() < 0.5 ? ["mage", "warrior"] : ["warrior", "mage"];
 }
 
 function rollCpuClass() {
-  cpuClass = Math.random() < 0.5 ? "mage" : "warrior";
+  if (cpuClassBag.length === 0) {
+    refillCpuClassBag();
+  }
+  cpuClass = cpuClassBag.pop();
   applyCpuClass();
   if (enemyHudName) {
     enemyHudName.textContent = cpuClass === "mage" ? "CPU Mage" : "CPU Warrior";
