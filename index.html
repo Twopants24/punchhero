@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Punch Hero</title>
-    <link rel="stylesheet" href="./style.css?v=20260529f" />
+    <link rel="stylesheet" href="./style.css?v=20260529g" />
   </head>
   <body>
     <div class="start-menu" id="start-menu">
@@ -28,6 +28,17 @@
           </button>
           <button class="mode-select__button" data-mode="training" type="button">
             Training
+          </button>
+        </div>
+        <div class="cpu-select" id="cpu-select">
+          <button class="cpu-select__button cpu-select__button--active" data-cpu="random" type="button">
+            Random CPU
+          </button>
+          <button class="cpu-select__button" data-cpu="warrior" type="button">
+            Warrior CPU
+          </button>
+          <button class="cpu-select__button" data-cpu="mage" type="button">
+            Mage CPU
           </button>
         </div>
         <button class="start-menu__button" id="play-button" type="button">Play</button>
@@ -86,6 +97,6 @@
     </div>
     <div class="countdown" id="countdown" hidden>3</div>
     <div class="crosshair" aria-hidden="true"></div>
-    <script type="module" src="./game.js?v=20260529f"></script>
+    <script type="module" src="./game.js?v=20260529g"></script>
   </body>
 </html>

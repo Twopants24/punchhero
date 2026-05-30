@@ -135,6 +135,13 @@ canvas {
   margin-bottom: 22px;
 }
 
+.cpu-select {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 22px;
+}
+
 .mode-select__button {
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 16px;
@@ -153,14 +160,44 @@ canvas {
     box-shadow 120ms ease;
 }
 
+.cpu-select__button {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 16px;
+  padding: 12px 10px;
+  font: inherit;
+  font-weight: 800;
+  font-size: 0.82rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+  transition:
+    transform 120ms ease,
+    border-color 120ms ease,
+    background 120ms ease,
+    box-shadow 120ms ease;
+}
+
 .mode-select__button:hover {
   transform: translateY(-1px);
   border-color: rgba(143, 216, 255, 0.42);
 }
 
+.cpu-select__button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(216, 164, 255, 0.42);
+}
+
 .mode-select__button--active {
   border-color: rgba(143, 216, 255, 0.68);
   background: linear-gradient(135deg, rgba(143, 216, 255, 0.18), rgba(255, 209, 95, 0.12));
+  box-shadow: 0 14px 24px rgba(8, 16, 34, 0.24);
+}
+
+.cpu-select__button--active {
+  border-color: rgba(216, 164, 255, 0.72);
+  background: linear-gradient(135deg, rgba(216, 164, 255, 0.18), rgba(255, 209, 95, 0.12));
   box-shadow: 0 14px 24px rgba(8, 16, 34, 0.24);
 }
 

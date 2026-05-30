@@ -100,6 +100,8 @@ const classSelect = document.getElementById("class-select");
 const classButtons = Array.from(document.querySelectorAll("[data-class]"));
 const modeSelect = document.getElementById("mode-select");
 const modeButtons = Array.from(document.querySelectorAll("[data-mode]"));
+const cpuSelect = document.getElementById("cpu-select");
+const cpuButtons = Array.from(document.querySelectorAll("[data-cpu]"));
 const hintE = document.getElementById("hint-e");
 const hint1 = document.getElementById("hint-1");
 const hint2 = document.getElementById("hint-2");
@@ -142,6 +144,7 @@ const fireballs = [];
 const thunderBursts = [];
 let selectedClass = "warrior";
 let selectedMode = "versus";
+let selectedCpuSetting = "random";
 let cpuClass = "warrior";
 let cpuClassBag = [];
 
@@ -311,10 +314,14 @@ function refillCpuClassBag() {
 }
 
 function rollCpuClass() {
-  if (cpuClassBag.length === 0) {
-    refillCpuClassBag();
+  if (selectedCpuSetting === "mage" || selectedCpuSetting === "warrior") {
+    cpuClass = selectedCpuSetting;
+  } else {
+    if (cpuClassBag.length === 0) {
+      refillCpuClassBag();
+    }
+    cpuClass = cpuClassBag.pop();
   }
-  cpuClass = cpuClassBag.pop();
   applyCpuClass();
   if (enemyHudName) {
     enemyHudName.textContent = cpuClass === "mage" ? "CPU Mage" : "CPU Warrior";
@@ -583,6 +590,22 @@ if (modeSelect) {
       entry.classList.toggle("mode-select__button--active", entry === button);
     });
     applySelectedMode();
+  });
+}
+
+if (cpuSelect) {
+  cpuSelect.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-cpu]");
+    if (!button) return;
+    selectedCpuSetting = button.dataset.cpu === "mage"
+      ? "mage"
+      : button.dataset.cpu === "warrior"
+        ? "warrior"
+        : "random";
+    cpuClassBag = [];
+    cpuButtons.forEach((entry) => {
+      entry.classList.toggle("cpu-select__button--active", entry === button);
+    });
   });
 }
 
