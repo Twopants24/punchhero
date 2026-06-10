@@ -107,6 +107,7 @@ const difficultyValue = document.getElementById("difficulty-value");
 const hintE = document.getElementById("hint-e");
 const hint1 = document.getElementById("hint-1");
 const hint2 = document.getElementById("hint-2");
+const hint3 = document.getElementById("hint-3");
 const hintQ = document.getElementById("hint-q");
 const hintC = document.getElementById("hint-c");
 const enemyHud = document.getElementById("enemy-hud");
@@ -332,9 +333,15 @@ function updateHudForClass() {
   if (selectedClass === "mage") {
     if (hint1) hint1.textContent = "Arcane Burst: 1";
     if (hint2) hint2.textContent = "Thunderbolts: 2";
+    if (hint3) hint3.textContent = "Special 3: --";
+  } else if (selectedClass === "knight") {
+    if (hint1) hint1.textContent = "Shield Rush: 1";
+    if (hint2) hint2.textContent = "Royal Cleave: 2";
+    if (hint3) hint3.textContent = "King's Quake: 3";
   } else {
     if (hint1) hint1.textContent = "Avalanche: 1";
     if (hint2) hint2.textContent = "Comet Dash: 2";
+    if (hint3) hint3.textContent = "Special 3: --";
   }
 }
 
@@ -377,18 +384,25 @@ function applySelectedMode() {
 
 function applySelectedClass() {
   const isMage = selectedClass === "mage";
-  character.bodyMat.color.setHex(isMage ? 0x6f54d9 : 0xff6b57);
-  character.darkMat.color.setHex(isMage ? 0x23124e : 0x223254);
-  character.gloveMat.color.setHex(isMage ? 0x9cc7ff : 0x0f1320);
-  character.mouthMat.color.setHex(isMage ? 0x6659b7 : 0x8e4c42);
-  character.hair.visible = !isMage;
+  const isKnight = selectedClass === "knight";
+  character.bodyMat.color.setHex(isMage ? 0x6f54d9 : isKnight ? 0xb7c3d9 : 0xff6b57);
+  character.darkMat.color.setHex(isMage ? 0x23124e : isKnight ? 0x314264 : 0x223254);
+  character.gloveMat.color.setHex(isMage ? 0x9cc7ff : isKnight ? 0xe2b75c : 0x0f1320);
+  character.mouthMat.color.setHex(isMage ? 0x6659b7 : isKnight ? 0x6b6d78 : 0x8e4c42);
+  character.hair.visible = !isMage && !isKnight;
   character.mageHat.visible = isMage;
   character.mageBrim.visible = isMage;
   character.cape.visible = isMage;
   character.robeFront.visible = isMage;
-  character.windRingLow.material.color.setHex(isMage ? 0xd6a4ff : 0xd8f4ff);
-  character.windRingHigh.material.color.setHex(isMage ? 0xd6a4ff : 0xd8f4ff);
-  character.windSlash.material.color.setHex(isMage ? 0xf7d2ff : 0xd8f4ff);
+  character.knightHelm.visible = isKnight;
+  character.knightVisor.visible = isKnight;
+  character.knightPlume.visible = isKnight;
+  character.knightPauldronLeft.visible = isKnight;
+  character.knightPauldronRight.visible = isKnight;
+  character.knightShield.visible = isKnight;
+  character.windRingLow.material.color.setHex(isMage ? 0xd6a4ff : isKnight ? 0xffd36d : 0xd8f4ff);
+  character.windRingHigh.material.color.setHex(isMage ? 0xd6a4ff : isKnight ? 0xffd36d : 0xd8f4ff);
+  character.windSlash.material.color.setHex(isMage ? 0xf7d2ff : isKnight ? 0xfff2b4 : 0xd8f4ff);
   updateHudForClass();
 }
 
@@ -403,6 +417,12 @@ function applyCpuClass() {
   cpuCharacter.mageBrim.visible = isMage;
   cpuCharacter.cape.visible = isMage;
   cpuCharacter.robeFront.visible = isMage;
+  cpuCharacter.knightHelm.visible = false;
+  cpuCharacter.knightVisor.visible = false;
+  cpuCharacter.knightPlume.visible = false;
+  cpuCharacter.knightPauldronLeft.visible = false;
+  cpuCharacter.knightPauldronRight.visible = false;
+  cpuCharacter.knightShield.visible = false;
   cpuCharacter.windRingLow.material.color.setHex(isMage ? 0xd6b7ff : 0xc9e3ff);
   cpuCharacter.windRingHigh.material.color.setHex(isMage ? 0xd6b7ff : 0xc9e3ff);
   cpuCharacter.windSlash.material.color.setHex(isMage ? 0xf2ddff : 0xc9e3ff);
@@ -675,7 +695,12 @@ if (classSelect) {
   classSelect.addEventListener("click", (event) => {
     const button = event.target.closest("[data-class]");
     if (!button) return;
-    selectedClass = button.dataset.class === "mage" ? "mage" : "warrior";
+    selectedClass =
+      button.dataset.class === "mage"
+        ? "mage"
+        : button.dataset.class === "knight"
+          ? "knight"
+          : "warrior";
     classButtons.forEach((entry) => {
       entry.classList.toggle("class-select__button--active", entry === button);
     });
@@ -781,6 +806,23 @@ window.addEventListener("keydown", (event) => {
       if (state.fireballCooldown <= 0 && !state.skySmashActive && trySpendStamina(18)) {
         castArcaneBurst();
       }
+    } else if (
+      selectedClass === "knight" &&
+      state.cometDashCooldown <= 0 &&
+      !state.isCometDashing &&
+      !state.skySmashActive &&
+      trySpendStamina(28)
+    ) {
+      state.isCometDashing = true;
+      state.cometDashTimer = state.cometDashDuration;
+      state.cometDashCooldown = 2.35;
+      state.cometDashHit = false;
+      state.isPunching = false;
+      state.punchTimer = 0;
+      state.isAvalanching = false;
+      state.avalancheTimer = 0;
+      state.avalancheHitTimer = 0;
+      updateLockStatus("Shield rush!");
     } else if (state.avalancheCooldown <= 0 && !state.isAvalanching && !state.skySmashActive && trySpendStamina(26)) {
       state.isAvalanching = true;
       state.avalancheTimer = state.avalancheDuration;
@@ -798,6 +840,10 @@ window.addEventListener("keydown", (event) => {
       if (state.thunderCooldown <= 0 && !state.skySmashActive && trySpendStamina(24)) {
         castThunderBurst();
       }
+    } else if (selectedClass === "knight") {
+      if (state.avalancheCooldown <= 0 && !state.skySmashActive && trySpendStamina(22)) {
+        castKnightRoyalCleave();
+      }
     } else if (
       state.cometDashCooldown <= 0 &&
       !state.isCometDashing &&
@@ -814,6 +860,12 @@ window.addEventListener("keydown", (event) => {
       state.avalancheTimer = 0;
       state.avalancheHitTimer = 0;
       updateLockStatus("Comet dash!");
+    }
+  }
+
+  if (event.code === "Digit3" && selectedClass === "knight") {
+    if (state.thunderCooldown <= 0 && !state.skySmashActive && trySpendStamina(30)) {
+      castKnightKingsQuake();
     }
   }
 
@@ -954,6 +1006,33 @@ function buildCharacter(options = {}) {
   mageHat.castShadow = true;
   head.add(mageHat);
 
+  const knightHelm = new THREE.Mesh(
+    new THREE.BoxGeometry(0.98, 0.34, 0.98),
+    bodyMat,
+  );
+  knightHelm.position.y = 0.5;
+  knightHelm.visible = false;
+  knightHelm.castShadow = true;
+  head.add(knightHelm);
+
+  const knightVisor = new THREE.Mesh(
+    new THREE.BoxGeometry(0.72, 0.16, 0.08),
+    darkMat,
+  );
+  knightVisor.position.set(0, 0.1, -0.48);
+  knightVisor.visible = false;
+  head.add(knightVisor);
+
+  const knightPlume = new THREE.Mesh(
+    new THREE.BoxGeometry(0.12, 0.5, 0.18),
+    gloveMat,
+  );
+  knightPlume.position.set(0, 0.92, 0.02);
+  knightPlume.rotation.z = -0.1;
+  knightPlume.visible = false;
+  knightPlume.castShadow = true;
+  head.add(knightPlume);
+
   const armLeft = createLimb(bodyMat, gloveMat, skinMat);
   armLeft.shoulder.position.set(-0.88, 1.45, 0);
   hips.add(armLeft.shoulder);
@@ -969,6 +1048,36 @@ function buildCharacter(options = {}) {
   const legRight = createLeg(darkMat, bodyMat);
   legRight.hip.position.set(0.4, 0.16, 0);
   hips.add(legRight.hip);
+
+  const knightPauldronLeft = new THREE.Mesh(
+    new THREE.BoxGeometry(0.46, 0.26, 0.58),
+    bodyMat,
+  );
+  knightPauldronLeft.position.set(-0.88, 1.68, 0);
+  knightPauldronLeft.rotation.z = 0.18;
+  knightPauldronLeft.visible = false;
+  knightPauldronLeft.castShadow = true;
+  hips.add(knightPauldronLeft);
+
+  const knightPauldronRight = new THREE.Mesh(
+    new THREE.BoxGeometry(0.46, 0.26, 0.58),
+    bodyMat,
+  );
+  knightPauldronRight.position.set(0.88, 1.68, 0);
+  knightPauldronRight.rotation.z = -0.18;
+  knightPauldronRight.visible = false;
+  knightPauldronRight.castShadow = true;
+  hips.add(knightPauldronRight);
+
+  const knightShield = new THREE.Mesh(
+    new THREE.BoxGeometry(0.14, 0.86, 0.7),
+    darkMat,
+  );
+  knightShield.position.set(0, -0.38, -0.18);
+  knightShield.rotation.z = 0.14;
+  knightShield.visible = false;
+  knightShield.castShadow = true;
+  armLeft.elbow.add(knightShield);
 
   const cape = new THREE.Mesh(
     new THREE.BoxGeometry(1.18, 1.8, 0.12),
@@ -1062,6 +1171,12 @@ function buildCharacter(options = {}) {
     hair,
     mageHat,
     mageBrim,
+    knightHelm,
+    knightVisor,
+    knightPlume,
+    knightPauldronLeft,
+    knightPauldronRight,
+    knightShield,
     cape,
     robeFront,
     hips,
@@ -1594,6 +1709,155 @@ function castThunderBurst() {
   }
 }
 
+function castKnightRoyalCleave() {
+  state.avalancheCooldown = 1.9;
+  state.isPunching = true;
+  state.punchTimer = state.punchDuration * 0.9;
+  state.blockEffectTimer = 0.22;
+  updateLockStatus("Royal cleave!");
+
+  const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(character.root.quaternion).normalize();
+
+  dummies.entries.forEach((dummy) => {
+    const toDummy = dummy.root.position.clone().sub(character.root.position);
+    const distance = toDummy.length();
+    if (distance > 3.45) return;
+    toDummy.y = 0;
+    if (toDummy.lengthSq() < 0.0001) return;
+    toDummy.normalize();
+    if (forward.dot(toDummy) < 0.24) return;
+    dummy.wobble = Math.max(dummy.wobble, 1.25);
+    dummy.hitFlash = 0.34;
+    dummy.root.position.addScaledVector(toDummy, 0.46);
+  });
+
+  if (selectedMode !== "training") {
+    const toCpu = cpuCharacter.root.position.clone().sub(character.root.position);
+    const distance = toCpu.length();
+    const planar = toCpu.clone();
+    planar.y = 0;
+    if (distance <= 3.35 && planar.lengthSq() > 0.0001) {
+      planar.normalize();
+      if (forward.dot(planar) >= 0.24) {
+        const landed = applyHit(character, cpuCharacter, cpuState, 26);
+        if (landed) {
+          cpuState.velocity.addScaledVector(planar, 3.6);
+          cpuState.stunTimer = Math.max(cpuState.stunTimer, 0.68);
+        }
+      }
+    }
+  }
+
+  const root = new THREE.Group();
+  const arc = new THREE.Mesh(
+    new THREE.RingGeometry(0.9, 1.72, 36, 1, Math.PI * 0.12, Math.PI * 0.78),
+    new THREE.MeshBasicMaterial({
+      color: 0xffecad,
+      transparent: true,
+      opacity: 0.74,
+      side: THREE.DoubleSide,
+    }),
+  );
+  arc.rotation.set(Math.PI / 2, 0, -Math.PI / 4);
+  const ring = new THREE.Mesh(
+    new THREE.TorusGeometry(0.9, 0.06, 10, 28),
+    new THREE.MeshBasicMaterial({
+      color: 0xffc55f,
+      transparent: true,
+      opacity: 0.54,
+    }),
+  );
+  ring.rotation.x = Math.PI / 2;
+  ring.scale.set(1.18, 1, 1.18);
+  root.add(arc);
+  root.add(ring);
+  root.position.copy(character.root.position).add(new THREE.Vector3(0, 1.5, 0)).addScaledVector(forward, 1.15);
+  root.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, -1), forward);
+  scene.add(root);
+  fireballs.push({
+    type: "knightCleave",
+    root,
+    arc,
+    ring,
+    forward,
+    speed: 1.6,
+    life: 0.28,
+    maxLife: 0.28,
+  });
+}
+
+function castKnightKingsQuake() {
+  state.thunderCooldown = 3.1;
+  state.isPunching = true;
+  state.punchTimer = state.punchDuration * 0.72;
+  state.blockEffectTimer = 0.34;
+  updateLockStatus("King's quake!");
+
+  dummies.entries.forEach((dummy) => {
+    const toDummy = dummy.root.position.clone().sub(character.root.position);
+    const distance = toDummy.length();
+    if (distance > 3.2) return;
+    dummy.wobble = Math.max(dummy.wobble, 1.35);
+    dummy.hitFlash = 0.36;
+    dummy.root.position.addScaledVector(toDummy.normalize(), 0.54);
+  });
+
+  if (selectedMode !== "training") {
+    const toCpu = cpuCharacter.root.position.clone().sub(character.root.position);
+    const distance = toCpu.length();
+    if (distance <= 3.15) {
+      const hitLanded = applyHit(character, cpuCharacter, cpuState, 30);
+      if (hitLanded) {
+        const knockback = cpuCharacter.root.position.clone().sub(character.root.position);
+        knockback.y = 0;
+        if (knockback.lengthSq() > 0.0001) {
+          knockback.normalize();
+          cpuState.velocity.addScaledVector(knockback, 4.4);
+        }
+        cpuState.stunTimer = Math.max(cpuState.stunTimer, 0.9);
+        cpuState.knockdownTimer = Math.max(cpuState.knockdownTimer, 0.9);
+      }
+    }
+  }
+
+  const root = new THREE.Group();
+  const disc = new THREE.Mesh(
+    new THREE.CircleGeometry(0.9, 28),
+    new THREE.MeshBasicMaterial({
+      color: 0xffd46a,
+      transparent: true,
+      opacity: 0.45,
+      side: THREE.DoubleSide,
+    }),
+  );
+  disc.rotation.x = -Math.PI / 2;
+  disc.position.y = 0.05;
+  root.add(disc);
+
+  const ring = new THREE.Mesh(
+    new THREE.RingGeometry(0.85, 1.45, 28),
+    new THREE.MeshBasicMaterial({
+      color: 0xfff1b5,
+      transparent: true,
+      opacity: 0.72,
+      side: THREE.DoubleSide,
+    }),
+  );
+  ring.rotation.x = -Math.PI / 2;
+  ring.position.y = 0.07;
+  root.add(ring);
+
+  root.position.copy(character.root.position);
+  scene.add(root);
+  thunderBursts.push({
+    type: "knightQuake",
+    root,
+    ring,
+    life: 0.42,
+    maxLife: 0.42,
+  });
+}
+
 function tryAvalanche() {
   getPunchableDummies().forEach((dummy) => {
     dummy.wobble = Math.max(dummy.wobble, 1.05);
@@ -1623,29 +1887,30 @@ function tryAvalanche() {
 
 function tryCometDash() {
   if (state.cometDashHit) return;
+  const isKnight = selectedClass === "knight";
 
   dummies.entries.forEach((dummy) => {
     const toDummy = dummy.root.position.clone().sub(character.root.position);
-    if (toDummy.length() > 2.4) return;
-    dummy.wobble = Math.max(dummy.wobble, 1.4);
-    dummy.hitFlash = 0.36;
-    dummy.root.position.addScaledVector(toDummy.normalize(), 0.42);
+    if (toDummy.length() > (isKnight ? 2.7 : 2.4)) return;
+    dummy.wobble = Math.max(dummy.wobble, isKnight ? 1.52 : 1.4);
+    dummy.hitFlash = isKnight ? 0.42 : 0.36;
+    dummy.root.position.addScaledVector(toDummy.normalize(), isKnight ? 0.5 : 0.42);
   });
 
   if (selectedMode !== "training") {
     const toCpu = cpuCharacter.root.position.clone().sub(character.root.position);
     const distance = toCpu.length();
     const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(character.root.quaternion).normalize();
-    if (distance <= 2.9 && forward.dot(toCpu.normalize()) >= 0.42) {
-      const hitLanded = applyHit(character, cpuCharacter, cpuState, 34);
+    if (distance <= (isKnight ? 3.05 : 2.9) && forward.dot(toCpu.normalize()) >= 0.42) {
+      const hitLanded = applyHit(character, cpuCharacter, cpuState, isKnight ? 29 : 34);
       if (hitLanded) {
         const knockback = cpuCharacter.root.position.clone().sub(character.root.position);
         knockback.y = 0;
         if (knockback.lengthSq() > 0.0001) {
           knockback.normalize();
-          cpuState.velocity.addScaledVector(knockback, 5.8);
+          cpuState.velocity.addScaledVector(knockback, isKnight ? 5 : 5.8);
         }
-        cpuState.stunTimer = Math.max(cpuState.stunTimer, 1.1);
+        cpuState.stunTimer = Math.max(cpuState.stunTimer, isKnight ? 0.95 : 1.1);
         cpuState.knockdownTimer = Math.max(cpuState.knockdownTimer, 1.2);
         state.cometDashHit = true;
       }
@@ -2344,6 +2609,15 @@ function updateFireballs(dt) {
       fireball.ringA.scale.setScalar(1 + burstProgress * 2.4);
       fireball.ringB.scale.setScalar(1 + burstProgress * 2.9);
       fireball.slash.scale.set(1 + burstProgress * 1.6, 1 + burstProgress * 0.6, 1 + burstProgress * 2.8);
+    } else if (fireball.type === "knightCleave") {
+      const cleaveProgress = 1 - Math.max(fireball.life, 0) / fireball.maxLife;
+      fireball.root.position.addScaledVector(fireball.forward, fireball.speed * dt);
+      fireball.root.rotation.z += dt * 10;
+      fireball.arc.material.opacity = Math.max(0, 0.74 - cleaveProgress * 0.62);
+      fireball.ring.material.opacity = Math.max(0, 0.54 - cleaveProgress * 0.46);
+      fireball.arc.scale.setScalar(1 + cleaveProgress * 0.95);
+      fireball.ring.rotation.z += dt * 14;
+      fireball.ring.scale.setScalar(1.18 + cleaveProgress * 0.95);
     }
 
     if (fireball.life <= 0 || fireball.root.position.length() > 40) {
@@ -2361,10 +2635,19 @@ function updateThunderBursts(dt) {
   for (let i = thunderBursts.length - 1; i >= 0; i -= 1) {
     const burst = thunderBursts[i];
     burst.life -= dt;
-    burst.root.children[0].material.opacity = Math.max(0, burst.life / 0.32);
-    burst.root.children[0].material.transparent = true;
-    burst.ring.material.opacity = Math.max(0, burst.life / 0.32);
-    burst.ring.scale.setScalar(1 + (0.32 - Math.max(burst.life, 0)) * 2.4);
+    if (burst.type === "knightQuake") {
+      const pulseProgress = 1 - Math.max(burst.life, 0) / burst.maxLife;
+      burst.root.children[0].material.opacity = Math.max(0, 0.45 - pulseProgress * 0.36);
+      burst.root.children[0].material.transparent = true;
+      burst.root.children[0].scale.setScalar(1 + pulseProgress * 3.1);
+      burst.ring.material.opacity = Math.max(0, 0.72 - pulseProgress * 0.6);
+      burst.ring.scale.setScalar(1 + pulseProgress * 3.8);
+    } else {
+      burst.root.children[0].material.opacity = Math.max(0, burst.life / 0.32);
+      burst.root.children[0].material.transparent = true;
+      burst.ring.material.opacity = Math.max(0, burst.life / 0.32);
+      burst.ring.scale.setScalar(1 + (0.32 - Math.max(burst.life, 0)) * 2.4);
+    }
 
     if (burst.life <= 0) {
       scene.remove(burst.root);

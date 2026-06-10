@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Punch Hero</title>
-    <link rel="stylesheet" href="./style.css?v=20260610a" />
+    <link rel="stylesheet" href="./style.css?v=20260610b" />
   </head>
   <body>
     <div class="start-menu" id="start-menu">
@@ -17,9 +17,13 @@
             <span class="class-select__name">Warrior</span>
             <span class="class-select__desc">Brawler specials and heavy melee.</span>
           </button>
+          <button class="class-select__button" data-class="knight" type="button">
+            <span class="class-select__name">Knight</span>
+            <span class="class-select__desc">Armored duelist with rushdowns and quake slams.</span>
+          </button>
           <button class="class-select__button" data-class="mage" type="button">
             <span class="class-select__name">Mage</span>
-            <span class="class-select__desc">Spellfighter with fireball and thunder.</span>
+            <span class="class-select__desc">Spellfighter with bursts, thunder, and escapes.</span>
           </button>
         </div>
         <div class="mode-select" id="mode-select">
@@ -106,6 +110,7 @@
           <div id="hint-c">Timed Block: C</div>
           <div id="hint-1">Avalanche: 1</div>
           <div id="hint-2">Comet Dash: 2</div>
+          <div id="hint-3">Special 3: --</div>
           <div>Pause: `Esc`</div>
         </div>
         <button class="pause-menu__button" id="close-controls-button" type="button">Close</button>
@@ -119,6 +124,6 @@
     </div>
     <div class="countdown" id="countdown" hidden>3</div>
     <div class="crosshair" aria-hidden="true"></div>
-    <script type="module" src="./game.js?v=20260610a"></script>
+    <script type="module" src="./game.js?v=20260610b"></script>
   </body>
 </html>
