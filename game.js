@@ -102,6 +102,8 @@ const modeSelect = document.getElementById("mode-select");
 const modeButtons = Array.from(document.querySelectorAll("[data-mode]"));
 const cpuSelect = document.getElementById("cpu-select");
 const cpuButtons = Array.from(document.querySelectorAll("[data-cpu]"));
+const difficultySlider = document.getElementById("difficulty-slider");
+const difficultyValue = document.getElementById("difficulty-value");
 const hintE = document.getElementById("hint-e");
 const hint1 = document.getElementById("hint-1");
 const hint2 = document.getElementById("hint-2");
@@ -145,10 +147,78 @@ const thunderBursts = [];
 let selectedClass = "warrior";
 let selectedMode = "versus";
 let selectedCpuSetting = "random";
+let selectedDifficulty = 3;
 let cpuClass = "warrior";
 let cpuClassBag = [];
 
 const dirtColors = [0x8f6b42, 0x6f5338, 0xb08a59, 0xc9ad76];
+const cpuDifficultyProfiles = {
+  1: {
+    label: "Chill",
+    maxHp: 90,
+    damageMultiplier: 0.72,
+    incomingDamageMultiplier: 1.5,
+    regenPerSecond: 0.1,
+    blockChance: 0.04,
+    specialCooldownScale: 1.45,
+    punchCooldownScale: 1.22,
+    preferredRange: 2.15,
+    runThreshold: 5.2,
+    jumpCooldownScale: 1.18,
+  },
+  2: {
+    label: "Easy",
+    maxHp: 110,
+    damageMultiplier: 0.86,
+    incomingDamageMultiplier: 1.24,
+    regenPerSecond: 0.45,
+    blockChance: 0.14,
+    specialCooldownScale: 1.22,
+    punchCooldownScale: 1.1,
+    preferredRange: 2,
+    runThreshold: 4.8,
+    jumpCooldownScale: 1.08,
+  },
+  3: {
+    label: "Normal",
+    maxHp: 140,
+    damageMultiplier: 1,
+    incomingDamageMultiplier: 1,
+    regenPerSecond: 1.1,
+    blockChance: 0.32,
+    specialCooldownScale: 1,
+    punchCooldownScale: 1,
+    preferredRange: 1.9,
+    runThreshold: 4.4,
+    jumpCooldownScale: 1,
+  },
+  4: {
+    label: "Hard",
+    maxHp: 160,
+    damageMultiplier: 1.12,
+    incomingDamageMultiplier: 0.92,
+    regenPerSecond: 1.45,
+    blockChance: 0.46,
+    specialCooldownScale: 0.84,
+    punchCooldownScale: 0.92,
+    preferredRange: 1.8,
+    runThreshold: 4.05,
+    jumpCooldownScale: 0.88,
+  },
+  5: {
+    label: "Savage",
+    maxHp: 180,
+    damageMultiplier: 1.24,
+    incomingDamageMultiplier: 0.84,
+    regenPerSecond: 1.8,
+    blockChance: 0.62,
+    specialCooldownScale: 0.7,
+    punchCooldownScale: 0.8,
+    preferredRange: 1.7,
+    runThreshold: 3.7,
+    jumpCooldownScale: 0.76,
+  },
+};
 
 function createActorState() {
   return {
@@ -268,6 +338,35 @@ function updateHudForClass() {
   }
 }
 
+function getCpuDifficultyProfile() {
+  return cpuDifficultyProfiles[selectedDifficulty] ?? cpuDifficultyProfiles[3];
+}
+
+function updateDifficultyUi() {
+  const profile = getCpuDifficultyProfile();
+  if (difficultyValue) difficultyValue.textContent = profile.label;
+  if (difficultySlider) difficultySlider.value = String(selectedDifficulty);
+}
+
+function applyCpuDifficulty(resetHp = false) {
+  const profile = getCpuDifficultyProfile();
+  cpuState.maxHp = profile.maxHp;
+  if (resetHp) {
+    cpuState.hp = profile.maxHp;
+  } else {
+    cpuState.hp = Math.min(cpuState.hp, profile.maxHp);
+  }
+  updateHealthBars();
+}
+
+function scaleCpuDamage(baseDamage) {
+  return Math.max(1, Math.round(baseDamage * getCpuDifficultyProfile().damageMultiplier));
+}
+
+function scaleDamageAgainstCpu(baseDamage) {
+  return Math.max(1, Math.round(baseDamage * getCpuDifficultyProfile().incomingDamageMultiplier));
+}
+
 function applySelectedMode() {
   const trainingMode = selectedMode === "training";
   cpuCharacter.root.visible = !trainingMode;
@@ -338,6 +437,7 @@ function showGameOver(title, text) {
 }
 
 function startGame() {
+  applyCpuDifficulty(true);
   state.gameStarted = true;
   state.roundActive = false;
   state.paused = false;
@@ -433,6 +533,7 @@ function resetActorState(actorState, position, facing = 0) {
 
 function restartGame() {
   clearActiveEffects();
+  applyCpuDifficulty(true);
   resetActorState(state, character.root.position, 0);
   resetActorState(cpuState, cpuCharacter.root.position, Math.PI);
   character.root.position.copy(playerSpawn);
@@ -479,6 +580,7 @@ function returnToStartMenu() {
   state.roundActive = false;
   state.gameOver = false;
   state.paused = false;
+  applyCpuDifficulty(true);
   resetActorState(state, character.root.position, 0);
   resetActorState(cpuState, cpuCharacter.root.position, Math.PI);
   character.root.position.copy(playerSpawn);
@@ -609,8 +711,18 @@ if (cpuSelect) {
   });
 }
 
+if (difficultySlider) {
+  difficultySlider.addEventListener("input", () => {
+    selectedDifficulty = Number.parseInt(difficultySlider.value, 10) || 3;
+    updateDifficultyUi();
+    applyCpuDifficulty(true);
+  });
+}
+
 applySelectedClass();
 applySelectedMode();
+updateDifficultyUi();
+applyCpuDifficulty(true);
 
 window.addEventListener("keydown", (event) => {
   if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].includes(event.code)) {
@@ -1244,8 +1356,12 @@ function applyHit(attacker, target, targetState, damage) {
   if (state.gameOver || targetState.hitCooldown > 0 || targetState.hp <= 0) return false;
   if (selectedMode === "training" && target === cpuCharacter) return false;
 
+  const adjustedDamage =
+    target === cpuCharacter && attacker === character
+      ? scaleDamageAgainstCpu(damage)
+      : damage;
   const wasBlocked = targetState.isBlocking;
-  const blockedDamage = wasBlocked ? Math.ceil(damage * 0.15) : damage;
+  const blockedDamage = wasBlocked ? Math.ceil(adjustedDamage * 0.15) : adjustedDamage;
   targetState.hp = Math.max(0, targetState.hp - blockedDamage);
   targetState.hitCooldown = 0.45;
   if (wasBlocked) {
@@ -1603,7 +1719,8 @@ function updateActor(actor, actorState, input, faceTarget, dt, elapsed) {
     actorState.stamina = Math.min(actorState.maxStamina, actorState.stamina + staminaRegen * dt);
   }
   if (actorState.hp > 0 && actorState.hitCooldown <= 0) {
-    actorState.hp = Math.min(actorState.maxHp, actorState.hp + dt * 1.6);
+    const healthRegen = actor === cpuCharacter ? getCpuDifficultyProfile().regenPerSecond : 1.6;
+    actorState.hp = Math.min(actorState.maxHp, actorState.hp + dt * healthRegen);
   }
 
   actorState.walkCycle += dt * (isMoving ? (actorState.isRunning ? 12.5 : 9.5) : 2.2);
@@ -1855,14 +1972,14 @@ function tryCpuPunch() {
   const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(cpuCharacter.root.quaternion).normalize();
   if (forward.dot(toPlayer.normalize()) < 0.72) return false;
 
-  return applyHit(cpuCharacter, character, state, 10);
+  return applyHit(cpuCharacter, character, state, scaleCpuDamage(10));
 }
 
 function tryCpuSpinAttack() {
   if (cpuState.spinHasHit) return;
   const toPlayer = character.root.position.clone().sub(cpuCharacter.root.position);
   if (toPlayer.length() <= 2.75) {
-    applyHit(cpuCharacter, character, state, 18);
+    applyHit(cpuCharacter, character, state, scaleCpuDamage(18));
   }
   cpuState.spinHasHit = true;
 }
@@ -1881,7 +1998,7 @@ function castCpuArcaneBurst() {
   if (distance <= 3.55 && planar.lengthSq() > 0.0001) {
     planar.normalize();
     if (forward.dot(planar) >= 0.52) {
-      const landed = applyHit(cpuCharacter, character, state, 24);
+      const landed = applyHit(cpuCharacter, character, state, scaleCpuDamage(24));
       if (landed) {
         state.velocity.addScaledVector(planar, 3.2);
         state.stunTimer = Math.max(state.stunTimer, 0.55);
@@ -1977,7 +2094,7 @@ function castCpuThunderBurst() {
 
   const playerDistance = character.root.position.distanceTo(cpuCharacter.root.position);
   if (playerDistance <= 3.4) {
-    const landed = applyHit(cpuCharacter, character, state, 24);
+    const landed = applyHit(cpuCharacter, character, state, scaleCpuDamage(24));
     if (landed) {
       state.stunTimer = Math.max(state.stunTimer, 0.72);
       const knockback = character.root.position.clone().sub(cpuCharacter.root.position);
@@ -1995,7 +2112,7 @@ function tryCpuAvalanche() {
   const distance = toPlayer.length();
   const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(cpuCharacter.root.quaternion).normalize();
   if (distance <= 3.05 && forward.dot(toPlayer.normalize()) >= 0.42) {
-    const hitLanded = applyHit(cpuCharacter, character, state, 10);
+    const hitLanded = applyHit(cpuCharacter, character, state, scaleCpuDamage(10));
     if (hitLanded) {
       const knockback = character.root.position.clone().sub(cpuCharacter.root.position);
       knockback.y = 0;
@@ -2015,7 +2132,7 @@ function tryCpuCometDash() {
   const distance = toPlayer.length();
   const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(cpuCharacter.root.quaternion).normalize();
   if (distance <= 2.9 && forward.dot(toPlayer.normalize()) >= 0.42) {
-    const hitLanded = applyHit(cpuCharacter, character, state, 34);
+    const hitLanded = applyHit(cpuCharacter, character, state, scaleCpuDamage(34));
     if (hitLanded) {
       const knockback = character.root.position.clone().sub(cpuCharacter.root.position);
       knockback.y = 0;
@@ -2032,6 +2149,7 @@ function tryCpuCometDash() {
 
 function updateCpu(dt, elapsed) {
   if (selectedMode === "training") return;
+  const cpuDifficulty = getCpuDifficultyProfile();
   if (cpuState.stunTimer > 0) {
     cpuState.moveHorizontal = 0;
     cpuState.moveVertical = 0;
@@ -2065,16 +2183,21 @@ function updateCpu(dt, elapsed) {
     distance <= 2.8 &&
     playerThreatening &&
     forward.dot(planar) > 0.38 &&
-    (state.isCometDashing || state.isSpinning || state.isAvalanching || Math.random() < 0.32)
+    (
+      state.isCometDashing ||
+      state.isSpinning ||
+      state.isAvalanching ||
+      Math.random() < cpuDifficulty.blockChance
+    )
   ) {
     cpuState.isBlocking = true;
     cpuState.blockTimer = cpuState.blockDuration;
-    cpuState.blockCooldown = 1.15;
+    cpuState.blockCooldown = 1.15 * cpuDifficulty.punchCooldownScale;
     cpuState.aiBlockWindow = 0.45;
   }
 
   let desiredMove = new THREE.Vector3();
-  if (distance > 1.9) {
+  if (distance > cpuDifficulty.preferredRange) {
     desiredMove.copy(planar);
   } else {
     desiredMove.copy(right).multiplyScalar(Math.sin(elapsed * 1.7) > 0 ? 1 : -1).add(planar.multiplyScalar(-0.2));
@@ -2087,14 +2210,14 @@ function updateCpu(dt, elapsed) {
   if (cpuState.isGrounded && cpuState.aiJumpCooldown <= 0 && distance > 3.2 && distance < 6.2) {
     cpuState.verticalVelocity = 7.3;
     cpuState.isGrounded = false;
-    cpuState.aiJumpCooldown = 2.5 + Math.random() * 1.5;
+    cpuState.aiJumpCooldown = (2.5 + Math.random() * 1.5) * cpuDifficulty.jumpCooldownScale;
   }
 
   cpuState.aiJumpCooldown = Math.max(0, cpuState.aiJumpCooldown - dt);
   cpuState.aiPunchCooldown = Math.max(0, cpuState.aiPunchCooldown - dt);
 
   cpuState.isRunning =
-    distance > 4.4 && cpuState.isGrounded && desiredMove.lengthSq() > 0;
+    distance > cpuDifficulty.runThreshold && cpuState.isGrounded && desiredMove.lengthSq() > 0;
 
   const canUseSpecial =
     cpuState.aiSpecialCooldown <= 0 &&
@@ -2112,16 +2235,16 @@ function updateCpu(dt, elapsed) {
       cpuState.spinTimer = cpuState.spinDuration;
       cpuState.spinCooldown = 1.9;
       cpuState.spinHasHit = false;
-      cpuState.aiSpecialCooldown = 1.4;
+      cpuState.aiSpecialCooldown = 1.4 * cpuDifficulty.specialCooldownScale;
     } else if (cpuClass === "mage") {
       if (distance >= 2.15 && distance <= 3.7 && cpuState.fireballCooldown <= 0 && cpuState.stamina >= 18) {
         cpuState.stamina = Math.max(0, cpuState.stamina - 18);
         castCpuArcaneBurst();
-        cpuState.aiSpecialCooldown = 1.5;
+        cpuState.aiSpecialCooldown = 1.5 * cpuDifficulty.specialCooldownScale;
       } else if (distance <= 2.9 && cpuState.thunderCooldown <= 0 && cpuState.stamina >= 24) {
         cpuState.stamina = Math.max(0, cpuState.stamina - 24);
         castCpuThunderBurst();
-        cpuState.aiSpecialCooldown = 2.2;
+        cpuState.aiSpecialCooldown = 2.2 * cpuDifficulty.specialCooldownScale;
       }
     } else if (distance <= 2.95 && cpuState.avalancheCooldown <= 0 && cpuState.stamina >= 26) {
       cpuState.stamina = Math.max(0, cpuState.stamina - 26);
@@ -2131,7 +2254,7 @@ function updateCpu(dt, elapsed) {
       cpuState.avalancheHitTimer = 0;
       cpuState.isPunching = false;
       cpuState.punchTimer = 0;
-      cpuState.aiSpecialCooldown = 2;
+      cpuState.aiSpecialCooldown = 2 * cpuDifficulty.specialCooldownScale;
     } else if (distance > 2.5 && distance <= 5.4 && cpuState.cometDashCooldown <= 0 && cpuState.stamina >= 32) {
       cpuState.stamina = Math.max(0, cpuState.stamina - 32);
       cpuState.isCometDashing = true;
@@ -2143,15 +2266,15 @@ function updateCpu(dt, elapsed) {
       cpuState.isAvalanching = false;
       cpuState.avalancheTimer = 0;
       cpuState.avalancheHitTimer = 0;
-      cpuState.aiSpecialCooldown = 2.1;
+      cpuState.aiSpecialCooldown = 2.1 * cpuDifficulty.specialCooldownScale;
     }
   }
 
   if (cpuState.punchCooldown <= 0 && cpuState.aiPunchCooldown <= 0 && tryCpuPunch()) {
     cpuState.isPunching = true;
     cpuState.punchTimer = cpuState.punchDuration;
-    cpuState.punchCooldown = 0.65;
-    cpuState.aiPunchCooldown = 1.1;
+    cpuState.punchCooldown = 0.65 * cpuDifficulty.punchCooldownScale;
+    cpuState.aiPunchCooldown = 1.1 * cpuDifficulty.punchCooldownScale;
   }
 
   updateActor(cpuCharacter, cpuState, desiredMove, faceTarget, dt, elapsed);

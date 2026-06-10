@@ -142,6 +142,98 @@ canvas {
   margin-bottom: 22px;
 }
 
+.difficulty-control {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 22px;
+}
+
+.difficulty-control__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.difficulty-control__label {
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(246, 247, 251, 0.82);
+}
+
+.difficulty-control__value {
+  font-size: 0.92rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #ffd483;
+}
+
+.difficulty-control__slider {
+  width: 100%;
+  height: 10px;
+  margin: 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(130, 218, 255, 0.48), rgba(255, 209, 95, 0.74), rgba(255, 124, 124, 0.72));
+  outline: none;
+  appearance: none;
+}
+
+.difficulty-control__slider::-webkit-slider-thumb {
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 50%;
+  background: #f7fbff;
+  box-shadow: 0 8px 18px rgba(8, 16, 34, 0.35);
+  cursor: pointer;
+  appearance: none;
+}
+
+.difficulty-control__slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 50%;
+  background: #f7fbff;
+  box-shadow: 0 8px 18px rgba(8, 16, 34, 0.35);
+  cursor: pointer;
+}
+
+.difficulty-control__slider::-moz-range-track {
+  height: 10px;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(130, 218, 255, 0.48), rgba(255, 209, 95, 0.74), rgba(255, 124, 124, 0.72));
+}
+
+.difficulty-control__ticks {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(246, 247, 251, 0.52);
+}
+
+.difficulty-control__ticks span:nth-child(1) {
+  text-align: left;
+}
+
+.difficulty-control__ticks span:nth-child(2),
+.difficulty-control__ticks span:nth-child(3),
+.difficulty-control__ticks span:nth-child(4) {
+  text-align: center;
+}
+
+.difficulty-control__ticks span:nth-child(5) {
+  text-align: right;
+}
+
 .mode-select__button {
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 16px;

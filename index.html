@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Punch Hero</title>
-    <link rel="stylesheet" href="./style.css?v=20260530a" />
+    <link rel="stylesheet" href="./style.css?v=20260603a" />
   </head>
   <body>
     <div class="start-menu" id="start-menu">
@@ -40,6 +40,28 @@
           <button class="cpu-select__button" data-cpu="mage" type="button">
             Mage CPU
           </button>
+        </div>
+        <div class="difficulty-control">
+          <div class="difficulty-control__top">
+            <span class="difficulty-control__label">CPU Difficulty</span>
+            <span class="difficulty-control__value" id="difficulty-value">Normal</span>
+          </div>
+          <input
+            class="difficulty-control__slider"
+            id="difficulty-slider"
+            type="range"
+            min="1"
+            max="5"
+            step="1"
+            value="3"
+          />
+          <div class="difficulty-control__ticks" aria-hidden="true">
+            <span>Chill</span>
+            <span>Easy</span>
+            <span>Normal</span>
+            <span>Hard</span>
+            <span>Savage</span>
+          </div>
         </div>
         <button class="start-menu__button" id="play-button" type="button">Play</button>
       </div>
@@ -97,6 +119,6 @@
     </div>
     <div class="countdown" id="countdown" hidden>3</div>
     <div class="crosshair" aria-hidden="true"></div>
-    <script type="module" src="./game.js?v=20260530a"></script>
+    <script type="module" src="./game.js?v=20260603a"></script>
   </body>
 </html>
