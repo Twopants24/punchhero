@@ -335,8 +335,8 @@ function updateHudForClass() {
     if (hint2) hint2.textContent = "Thunderbolts: 2";
     if (hint3) hint3.textContent = "Special 3: --";
   } else if (selectedClass === "knight") {
-    if (hint1) hint1.textContent = "Shield Rush: 1";
-    if (hint2) hint2.textContent = "Royal Cleave: 2";
+    if (hint1) hint1.textContent = "Guard Break: 1";
+    if (hint2) hint2.textContent = "Great Cleave: 2";
     if (hint3) hint3.textContent = "King's Quake: 3";
   } else {
     if (hint1) hint1.textContent = "Avalanche: 1";
@@ -400,6 +400,7 @@ function applySelectedClass() {
   character.knightPauldronLeft.visible = isKnight;
   character.knightPauldronRight.visible = isKnight;
   character.knightShield.visible = isKnight;
+  character.knightSword.visible = isKnight;
   character.windRingLow.material.color.setHex(isMage ? 0xd6a4ff : isKnight ? 0xffd36d : 0xd8f4ff);
   character.windRingHigh.material.color.setHex(isMage ? 0xd6a4ff : isKnight ? 0xffd36d : 0xd8f4ff);
   character.windSlash.material.color.setHex(isMage ? 0xf7d2ff : isKnight ? 0xfff2b4 : 0xd8f4ff);
@@ -423,6 +424,7 @@ function applyCpuClass() {
   cpuCharacter.knightPauldronLeft.visible = false;
   cpuCharacter.knightPauldronRight.visible = false;
   cpuCharacter.knightShield.visible = false;
+  cpuCharacter.knightSword.visible = false;
   cpuCharacter.windRingLow.material.color.setHex(isMage ? 0xd6b7ff : 0xc9e3ff);
   cpuCharacter.windRingHigh.material.color.setHex(isMage ? 0xd6b7ff : 0xc9e3ff);
   cpuCharacter.windSlash.material.color.setHex(isMage ? 0xf2ddff : 0xc9e3ff);
@@ -808,21 +810,11 @@ window.addEventListener("keydown", (event) => {
       }
     } else if (
       selectedClass === "knight" &&
-      state.cometDashCooldown <= 0 &&
-      !state.isCometDashing &&
+      state.fireballCooldown <= 0 &&
       !state.skySmashActive &&
-      trySpendStamina(28)
+      trySpendStamina(20)
     ) {
-      state.isCometDashing = true;
-      state.cometDashTimer = state.cometDashDuration;
-      state.cometDashCooldown = 2.35;
-      state.cometDashHit = false;
-      state.isPunching = false;
-      state.punchTimer = 0;
-      state.isAvalanching = false;
-      state.avalancheTimer = 0;
-      state.avalancheHitTimer = 0;
-      updateLockStatus("Shield rush!");
+      castKnightGuardBreak();
     } else if (state.avalancheCooldown <= 0 && !state.isAvalanching && !state.skySmashActive && trySpendStamina(26)) {
       state.isAvalanching = true;
       state.avalancheTimer = state.avalancheDuration;
@@ -1079,6 +1071,46 @@ function buildCharacter(options = {}) {
   knightShield.castShadow = true;
   armLeft.elbow.add(knightShield);
 
+  const knightSword = new THREE.Group();
+  knightSword.visible = false;
+  armRight.elbow.add(knightSword);
+
+  const knightSwordGrip = new THREE.Mesh(
+    new THREE.BoxGeometry(0.12, 0.28, 0.12),
+    gloveMat,
+  );
+  knightSwordGrip.position.set(0, -0.84, 0.06);
+  knightSwordGrip.castShadow = true;
+  knightSword.add(knightSwordGrip);
+
+  const knightSwordGuard = new THREE.Mesh(
+    new THREE.BoxGeometry(0.42, 0.08, 0.12),
+    gloveMat,
+  );
+  knightSwordGuard.position.set(0, -0.98, 0.06);
+  knightSwordGuard.castShadow = true;
+  knightSword.add(knightSwordGuard);
+
+  const knightSwordBlade = new THREE.Mesh(
+    new THREE.BoxGeometry(0.12, 1.45, 0.05),
+    bodyMat,
+  );
+  knightSwordBlade.position.set(0, -1.72, 0.06);
+  knightSwordBlade.castShadow = true;
+  knightSword.add(knightSwordBlade);
+
+  const knightSwordTip = new THREE.Mesh(
+    new THREE.ConeGeometry(0.1, 0.28, 4),
+    bodyMat,
+  );
+  knightSwordTip.position.set(0, -2.5, 0.06);
+  knightSwordTip.rotation.z = Math.PI;
+  knightSwordTip.castShadow = true;
+  knightSword.add(knightSwordTip);
+
+  knightSword.position.set(0.02, 0.02, -0.02);
+  knightSword.rotation.z = 0.04;
+
   const cape = new THREE.Mesh(
     new THREE.BoxGeometry(1.18, 1.8, 0.12),
     darkMat,
@@ -1177,6 +1209,7 @@ function buildCharacter(options = {}) {
     knightPauldronLeft,
     knightPauldronRight,
     knightShield,
+    knightSword,
     cape,
     robeFront,
     hips,
@@ -1709,6 +1742,83 @@ function castThunderBurst() {
   }
 }
 
+function castKnightGuardBreak() {
+  state.fireballCooldown = 1.45;
+  state.isPunching = true;
+  state.punchTimer = state.punchDuration;
+  state.blockEffectTimer = 0.18;
+  updateLockStatus("Guard break!");
+
+  const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(character.root.quaternion).normalize();
+
+  dummies.entries.forEach((dummy) => {
+    const toDummy = dummy.root.position.clone().sub(character.root.position);
+    const distance = toDummy.length();
+    if (distance > 2.85) return;
+    toDummy.y = 0;
+    if (toDummy.lengthSq() < 0.0001) return;
+    toDummy.normalize();
+    if (forward.dot(toDummy) < 0.64) return;
+    dummy.wobble = Math.max(dummy.wobble, 1.18);
+    dummy.hitFlash = 0.32;
+    dummy.root.position.addScaledVector(toDummy, 0.52);
+  });
+
+  if (selectedMode !== "training") {
+    const toCpu = cpuCharacter.root.position.clone().sub(character.root.position);
+    const distance = toCpu.length();
+    const planar = toCpu.clone();
+    planar.y = 0;
+    if (distance <= 2.8 && planar.lengthSq() > 0.0001) {
+      planar.normalize();
+      if (forward.dot(planar) >= 0.64) {
+        const landed = applyHit(character, cpuCharacter, cpuState, 24);
+        if (landed) {
+          cpuState.velocity.addScaledVector(planar, 4.1);
+          cpuState.stunTimer = Math.max(cpuState.stunTimer, 0.72);
+        }
+      }
+    }
+  }
+
+  const root = new THREE.Group();
+  const stab = new THREE.Mesh(
+    new THREE.BoxGeometry(0.22, 1.6, 0.08),
+    new THREE.MeshBasicMaterial({
+      color: 0xffefc8,
+      transparent: true,
+      opacity: 0.72,
+    }),
+  );
+  stab.rotation.x = Math.PI / 2;
+  const shock = new THREE.Mesh(
+    new THREE.RingGeometry(0.24, 0.62, 20),
+    new THREE.MeshBasicMaterial({
+      color: 0xffc867,
+      transparent: true,
+      opacity: 0.62,
+      side: THREE.DoubleSide,
+    }),
+  );
+  shock.rotation.x = Math.PI / 2;
+  shock.position.z = -0.78;
+  root.add(stab);
+  root.add(shock);
+  root.position.copy(character.root.position).add(new THREE.Vector3(0, 1.42, 0)).addScaledVector(forward, 1.15);
+  root.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, -1), forward);
+  scene.add(root);
+  fireballs.push({
+    type: "knightStab",
+    root,
+    stab,
+    shock,
+    forward,
+    speed: 1.8,
+    life: 0.22,
+    maxLife: 0.22,
+  });
+}
+
 function castKnightRoyalCleave() {
   state.avalancheCooldown = 1.9;
   state.isPunching = true;
@@ -1721,14 +1831,14 @@ function castKnightRoyalCleave() {
   dummies.entries.forEach((dummy) => {
     const toDummy = dummy.root.position.clone().sub(character.root.position);
     const distance = toDummy.length();
-    if (distance > 3.45) return;
+    if (distance > 3.9) return;
     toDummy.y = 0;
     if (toDummy.lengthSq() < 0.0001) return;
     toDummy.normalize();
-    if (forward.dot(toDummy) < 0.24) return;
-    dummy.wobble = Math.max(dummy.wobble, 1.25);
-    dummy.hitFlash = 0.34;
-    dummy.root.position.addScaledVector(toDummy, 0.46);
+    if (forward.dot(toDummy) < 0.08) return;
+    dummy.wobble = Math.max(dummy.wobble, 1.42);
+    dummy.hitFlash = 0.38;
+    dummy.root.position.addScaledVector(toDummy, 0.6);
   });
 
   if (selectedMode !== "training") {
@@ -1736,13 +1846,13 @@ function castKnightRoyalCleave() {
     const distance = toCpu.length();
     const planar = toCpu.clone();
     planar.y = 0;
-    if (distance <= 3.35 && planar.lengthSq() > 0.0001) {
+    if (distance <= 3.85 && planar.lengthSq() > 0.0001) {
       planar.normalize();
-      if (forward.dot(planar) >= 0.24) {
-        const landed = applyHit(character, cpuCharacter, cpuState, 26);
+      if (forward.dot(planar) >= 0.08) {
+        const landed = applyHit(character, cpuCharacter, cpuState, 32);
         if (landed) {
-          cpuState.velocity.addScaledVector(planar, 3.6);
-          cpuState.stunTimer = Math.max(cpuState.stunTimer, 0.68);
+          cpuState.velocity.addScaledVector(planar, 4.7);
+          cpuState.stunTimer = Math.max(cpuState.stunTimer, 0.82);
         }
       }
     }
@@ -1750,28 +1860,28 @@ function castKnightRoyalCleave() {
 
   const root = new THREE.Group();
   const arc = new THREE.Mesh(
-    new THREE.RingGeometry(0.9, 1.72, 36, 1, Math.PI * 0.12, Math.PI * 0.78),
+    new THREE.RingGeometry(1.1, 2.28, 40, 1, Math.PI * 0.02, Math.PI * 1.1),
     new THREE.MeshBasicMaterial({
       color: 0xffecad,
       transparent: true,
-      opacity: 0.74,
+      opacity: 0.86,
       side: THREE.DoubleSide,
     }),
   );
   arc.rotation.set(Math.PI / 2, 0, -Math.PI / 4);
   const ring = new THREE.Mesh(
-    new THREE.TorusGeometry(0.9, 0.06, 10, 28),
+    new THREE.TorusGeometry(1.2, 0.08, 10, 30),
     new THREE.MeshBasicMaterial({
       color: 0xffc55f,
       transparent: true,
-      opacity: 0.54,
+      opacity: 0.68,
     }),
   );
   ring.rotation.x = Math.PI / 2;
-  ring.scale.set(1.18, 1, 1.18);
+  ring.scale.set(1.25, 1, 1.25);
   root.add(arc);
   root.add(ring);
-  root.position.copy(character.root.position).add(new THREE.Vector3(0, 1.5, 0)).addScaledVector(forward, 1.15);
+  root.position.copy(character.root.position).add(new THREE.Vector3(0, 1.56, 0)).addScaledVector(forward, 1.4);
   root.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, -1), forward);
   scene.add(root);
   fireballs.push({
@@ -2135,6 +2245,12 @@ function updateActor(actor, actorState, input, faceTarget, dt, elapsed) {
   actor.armRight.shoulder.rotation.y = -0.18 - punchSwing * 0.55 + spinArc * 0.9 - blockArc * 0.35 - cometDashArc * 0.45 + avalancheBurst * 0.32 + knockdownArc * 0.18 - tripArc * 0.2;
   actor.armRight.shoulder.rotation.z = 0.34 + punchSwing * 0.08 - strafe * 0.18 + spinArc * 0.7 + blockArc * 0.42 + avalancheArc * 0.55 + cometDashArc * 0.22 + knockdownArc * 0.22 + tripArc * 0.4;
   actor.armRight.elbow.rotation.x = 0.95 - punchSwing * 1.55 + spinArc * 0.2 + blockArc * 0.8 + skySmashArc * (actorState.skySmashDive ? 0.55 : 0.9) + avalancheArc * 1.15 + cometDashArc * 0.2 + tripArc * 0.95;
+
+  if (actor.knightSword) {
+    actor.knightSword.rotation.x = selectedClass === "knight" && actor === character ? 0.08 + punchSwing * 0.28 + cometDashArc * 0.18 : 0;
+    actor.knightSword.rotation.y = selectedClass === "knight" && actor === character ? 0.1 + spinArc * 0.22 : 0;
+    actor.knightSword.rotation.z = selectedClass === "knight" && actor === character ? 0.04 + punchSwing * 0.12 : 0.04;
+  }
 
   actor.legLeft.hip.rotation.x = walk * 0.8 * stride * strideDirection - strafe * 0.18 + airborne * 0.25;
   actor.legLeft.hip.rotation.z = -strafe * 0.14;
@@ -2609,6 +2725,14 @@ function updateFireballs(dt) {
       fireball.ringA.scale.setScalar(1 + burstProgress * 2.4);
       fireball.ringB.scale.setScalar(1 + burstProgress * 2.9);
       fireball.slash.scale.set(1 + burstProgress * 1.6, 1 + burstProgress * 0.6, 1 + burstProgress * 2.8);
+    } else if (fireball.type === "knightStab") {
+      const stabProgress = 1 - Math.max(fireball.life, 0) / fireball.maxLife;
+      fireball.root.position.addScaledVector(fireball.forward, fireball.speed * dt);
+      fireball.stab.material.opacity = Math.max(0, 0.72 - stabProgress * 0.56);
+      fireball.shock.material.opacity = Math.max(0, 0.62 - stabProgress * 0.5);
+      fireball.stab.scale.set(1, 1 + stabProgress * 0.8, 1);
+      fireball.shock.rotation.z += dt * 12;
+      fireball.shock.scale.setScalar(1 + stabProgress * 1.8);
     } else if (fireball.type === "knightCleave") {
       const cleaveProgress = 1 - Math.max(fireball.life, 0) / fireball.maxLife;
       fireball.root.position.addScaledVector(fireball.forward, fireball.speed * dt);
