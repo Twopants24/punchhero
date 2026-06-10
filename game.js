@@ -808,13 +808,14 @@ window.addEventListener("keydown", (event) => {
       if (state.fireballCooldown <= 0 && !state.skySmashActive && trySpendStamina(18)) {
         castArcaneBurst();
       }
-    } else if (
-      selectedClass === "knight" &&
-      state.fireballCooldown <= 0 &&
-      !state.skySmashActive &&
-      trySpendStamina(20)
-    ) {
-      castKnightGuardBreak();
+    } else if (selectedClass === "knight") {
+      if (
+        state.fireballCooldown <= 0 &&
+        !state.skySmashActive &&
+        trySpendStamina(20)
+      ) {
+        castKnightGuardBreak();
+      }
     } else if (state.avalancheCooldown <= 0 && !state.isAvalanching && !state.skySmashActive && trySpendStamina(26)) {
       state.isAvalanching = true;
       state.avalancheTimer = state.avalancheDuration;
