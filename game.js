@@ -1093,10 +1093,10 @@ function buildCharacter(options = {}) {
   knightSword.add(knightSwordGuard);
 
   const knightSwordBlade = new THREE.Mesh(
-    new THREE.BoxGeometry(0.12, 1.45, 0.05),
+    new THREE.BoxGeometry(0.12, 1.9, 0.05),
     bodyMat,
   );
-  knightSwordBlade.position.set(0, -1.72, 0.06);
+  knightSwordBlade.position.set(0, -1.95, 0.06);
   knightSwordBlade.castShadow = true;
   knightSword.add(knightSwordBlade);
 
@@ -1104,7 +1104,7 @@ function buildCharacter(options = {}) {
     new THREE.ConeGeometry(0.1, 0.28, 4),
     bodyMat,
   );
-  knightSwordTip.position.set(0, -2.5, 0.06);
+  knightSwordTip.position.set(0, -3.0, 0.06);
   knightSwordTip.rotation.z = Math.PI;
   knightSwordTip.castShadow = true;
   knightSword.add(knightSwordTip);
