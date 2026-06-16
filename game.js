@@ -1088,7 +1088,7 @@ function buildCharacter(options = {}) {
     new THREE.BoxGeometry(0.42, 0.08, 0.12),
     gloveMat,
   );
-  knightSwordGuard.position.set(0, -0.98, 0.06);
+  knightSwordGuard.position.set(0, -0.68, 0.06);
   knightSwordGuard.castShadow = true;
   knightSword.add(knightSwordGuard);
 
@@ -1096,7 +1096,7 @@ function buildCharacter(options = {}) {
     new THREE.BoxGeometry(0.12, 1.9, 0.05),
     bodyMat,
   );
-  knightSwordBlade.position.set(0, -1.95, 0.06);
+  knightSwordBlade.position.set(0, 0.3, 0.06);
   knightSwordBlade.castShadow = true;
   knightSword.add(knightSwordBlade);
 
@@ -1104,8 +1104,7 @@ function buildCharacter(options = {}) {
     new THREE.ConeGeometry(0.1, 0.28, 4),
     bodyMat,
   );
-  knightSwordTip.position.set(0, -3.0, 0.06);
-  knightSwordTip.rotation.z = Math.PI;
+  knightSwordTip.position.set(0, 1.36, 0.06);
   knightSwordTip.castShadow = true;
   knightSword.add(knightSwordTip);
 
