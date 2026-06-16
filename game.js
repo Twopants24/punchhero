@@ -399,7 +399,7 @@ function applySelectedClass() {
   character.knightPlume.visible = isKnight;
   character.knightPauldronLeft.visible = isKnight;
   character.knightPauldronRight.visible = isKnight;
-  character.knightShield.visible = isKnight;
+  character.knightShield.visible = false;
   character.knightSword.visible = isKnight;
   character.windRingLow.material.color.setHex(isMage ? 0xd6a4ff : isKnight ? 0xffd36d : 0xd8f4ff);
   character.windRingHigh.material.color.setHex(isMage ? 0xd6a4ff : isKnight ? 0xffd36d : 0xd8f4ff);
