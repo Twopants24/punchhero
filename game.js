@@ -2250,14 +2250,14 @@ function updateActor(actor, actorState, input, faceTarget, dt, elapsed) {
 
   actor.armRight.shoulder.rotation.x =
     walk * 0.25 * stride * strideDirection - 0.45 + punchSwing * 2.15 + spinArc * 1.1 - Math.abs(strafe) * 0.08 - airborne * 0.25 - blockArc * 0.35 + (stunned ? 0.45 : 0) - skySmashArc * (actorState.skySmashDive ? 0.55 : 1.2 + skySmashChargeTilt * 0.12) + avalancheBurst * 2.3 + avalancheArc * 0.5 - cometDashArc * 1.35 + knockdownArc * 0.5 + tripArc * 1.15 + knightGuard * 1.55;
-  actor.armRight.shoulder.rotation.y = -0.18 - punchSwing * 0.55 + spinArc * 0.9 - blockArc * 0.35 - cometDashArc * 0.45 + avalancheBurst * 0.32 + knockdownArc * 0.18 - tripArc * 0.2 - knightGuard * 0.28;
-  actor.armRight.shoulder.rotation.z = 0.34 + punchSwing * 0.08 - strafe * 0.18 + spinArc * 0.7 + blockArc * 0.42 + avalancheArc * 0.55 + cometDashArc * 0.22 + knockdownArc * 0.22 + tripArc * 0.4 - knightGuard * 0.18;
+  actor.armRight.shoulder.rotation.y = -0.18 - punchSwing * 0.55 + spinArc * 0.9 - blockArc * 0.35 - cometDashArc * 0.45 + avalancheBurst * 0.32 + knockdownArc * 0.18 - tripArc * 0.2 - knightGuard * 0.1;
+  actor.armRight.shoulder.rotation.z = 0.34 + punchSwing * 0.08 - strafe * 0.18 + spinArc * 0.7 + blockArc * 0.42 + avalancheArc * 0.55 + cometDashArc * 0.22 + knockdownArc * 0.22 + tripArc * 0.4 - knightGuard * 0.08;
   actor.armRight.elbow.rotation.x = 0.95 - punchSwing * 1.55 + spinArc * 0.2 + blockArc * 0.8 + skySmashArc * (actorState.skySmashDive ? 0.55 : 0.9) + avalancheArc * 1.15 + cometDashArc * 0.2 + tripArc * 0.95 - knightGuard * 0.62;
 
   if (actor.knightSword) {
-    actor.knightSword.rotation.x = isPlayerKnight ? 0.18 * knightGuard + 0.08 + punchSwing * 0.28 + cometDashArc * 0.18 : 0;
+    actor.knightSword.rotation.x = isPlayerKnight ? 1.1 * knightGuard + 0.08 + punchSwing * 0.28 + cometDashArc * 0.18 : 0;
     actor.knightSword.rotation.y = isPlayerKnight ? 0.1 + spinArc * 0.22 - knightGuard * 0.12 : 0;
-    actor.knightSword.rotation.z = isPlayerKnight ? 0.04 + punchSwing * 0.12 - knightGuard * 0.16 : 0.04;
+    actor.knightSword.rotation.z = isPlayerKnight ? 0.04 + punchSwing * 0.12 + knightGuard * 0.45 : 0.04;
   }
 
   actor.legLeft.hip.rotation.x = walk * 0.8 * stride * strideDirection - strafe * 0.18 + airborne * 0.25;
