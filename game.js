@@ -2225,6 +2225,13 @@ function updateActor(actor, actorState, input, faceTarget, dt, elapsed) {
   const skySmashHoverGlow = usingSkySmash && !actorState.skySmashDive
     ? 0.35 + Math.min(actorState.skySmashCharge / 18, 0.65)
     : 0;
+  const isPlayerKnight = selectedClass === "knight" && actor === character;
+  const actionPose = THREE.MathUtils.clamp(
+    punchSwing + spinArc + blockArc + avalancheArc + cometDashArc + skySmashArc + knockdownArc + tripArc,
+    0,
+    1,
+  );
+  const knightGuard = isPlayerKnight ? 1 - actionPose * 0.72 : 0;
 
   actor.hips.position.y = 1.15 + idleBob + Math.abs(walk) * 0.08 * stride + airborne * 0.1 - knockdownArc * 0.7 - tripArc * 0.38;
   actor.hips.rotation.z =
@@ -2236,21 +2243,21 @@ function updateActor(actor, actorState, input, faceTarget, dt, elapsed) {
   actor.headPivot.rotation.y = punchSwing * 0.12 - spinArc * 0.35 + blockArc * 0.08 + avalancheBurst * 0.14 - knockdownArc * 0.35;
 
   actor.armLeft.shoulder.rotation.x =
-    walkOpp * 0.7 * stride * strideDirection - 0.32 - punchSwing * 0.42 + spinArc * 1.25 - Math.abs(strafe) * 0.1 - airborne * 0.25 - blockArc * 0.35 + (stunned ? 0.45 : 0) - skySmashArc * (actorState.skySmashDive ? 0.55 : 1.2 + skySmashChargeTilt * 0.12) - avalancheBurst * 2.3 + avalancheArc * 0.5 - cometDashArc * 0.9 + knockdownArc * 1.3 + tripArc * 0.7;
-  actor.armLeft.shoulder.rotation.y = -punchSwing * 0.15 - spinArc * 0.7 + blockArc * 0.35 - avalancheBurst * 0.32 + cometDashArc * 0.2 - knockdownArc * 0.2;
-  actor.armLeft.shoulder.rotation.z = -0.32 - strafe * 0.18 - spinArc * 0.85 - blockArc * 0.42 - avalancheArc * 0.55 - cometDashArc * 0.35 - knockdownArc * 0.55 + tripArc * 0.25;
-  actor.armLeft.elbow.rotation.x = 0.55 + Math.max(0, -walkOpp) * 0.18 * stride + punchSwing * 0.2 + spinArc * 0.4 + blockArc * 0.8 + skySmashArc * (actorState.skySmashDive ? 0.55 : 0.9) + avalancheArc * 1.15 + cometDashArc * 0.6 + knockdownArc * 0.75;
+    walkOpp * 0.7 * stride * strideDirection - 0.32 - punchSwing * 0.42 + spinArc * 1.25 - Math.abs(strafe) * 0.1 - airborne * 0.25 - blockArc * 0.35 + (stunned ? 0.45 : 0) - skySmashArc * (actorState.skySmashDive ? 0.55 : 1.2 + skySmashChargeTilt * 0.12) - avalancheBurst * 2.3 + avalancheArc * 0.5 - cometDashArc * 0.9 + knockdownArc * 1.3 + tripArc * 0.7 + knightGuard * 0.56;
+  actor.armLeft.shoulder.rotation.y = -punchSwing * 0.15 - spinArc * 0.7 + blockArc * 0.35 - avalancheBurst * 0.32 + cometDashArc * 0.2 - knockdownArc * 0.2 + knightGuard * 0.3;
+  actor.armLeft.shoulder.rotation.z = -0.32 - strafe * 0.18 - spinArc * 0.85 - blockArc * 0.42 - avalancheArc * 0.55 - cometDashArc * 0.35 - knockdownArc * 0.55 + tripArc * 0.25 + knightGuard * 0.22;
+  actor.armLeft.elbow.rotation.x = 0.55 + Math.max(0, -walkOpp) * 0.18 * stride + punchSwing * 0.2 + spinArc * 0.4 + blockArc * 0.8 + skySmashArc * (actorState.skySmashDive ? 0.55 : 0.9) + avalancheArc * 1.15 + cometDashArc * 0.6 + knockdownArc * 0.75 + knightGuard * 0.35;
 
   actor.armRight.shoulder.rotation.x =
-    walk * 0.25 * stride * strideDirection - 0.45 + punchSwing * 2.15 + spinArc * 1.1 - Math.abs(strafe) * 0.08 - airborne * 0.25 - blockArc * 0.35 + (stunned ? 0.45 : 0) - skySmashArc * (actorState.skySmashDive ? 0.55 : 1.2 + skySmashChargeTilt * 0.12) + avalancheBurst * 2.3 + avalancheArc * 0.5 - cometDashArc * 1.35 + knockdownArc * 0.5 + tripArc * 1.15;
-  actor.armRight.shoulder.rotation.y = -0.18 - punchSwing * 0.55 + spinArc * 0.9 - blockArc * 0.35 - cometDashArc * 0.45 + avalancheBurst * 0.32 + knockdownArc * 0.18 - tripArc * 0.2;
-  actor.armRight.shoulder.rotation.z = 0.34 + punchSwing * 0.08 - strafe * 0.18 + spinArc * 0.7 + blockArc * 0.42 + avalancheArc * 0.55 + cometDashArc * 0.22 + knockdownArc * 0.22 + tripArc * 0.4;
-  actor.armRight.elbow.rotation.x = 0.95 - punchSwing * 1.55 + spinArc * 0.2 + blockArc * 0.8 + skySmashArc * (actorState.skySmashDive ? 0.55 : 0.9) + avalancheArc * 1.15 + cometDashArc * 0.2 + tripArc * 0.95;
+    walk * 0.25 * stride * strideDirection - 0.45 + punchSwing * 2.15 + spinArc * 1.1 - Math.abs(strafe) * 0.08 - airborne * 0.25 - blockArc * 0.35 + (stunned ? 0.45 : 0) - skySmashArc * (actorState.skySmashDive ? 0.55 : 1.2 + skySmashChargeTilt * 0.12) + avalancheBurst * 2.3 + avalancheArc * 0.5 - cometDashArc * 1.35 + knockdownArc * 0.5 + tripArc * 1.15 + knightGuard * 0.92;
+  actor.armRight.shoulder.rotation.y = -0.18 - punchSwing * 0.55 + spinArc * 0.9 - blockArc * 0.35 - cometDashArc * 0.45 + avalancheBurst * 0.32 + knockdownArc * 0.18 - tripArc * 0.2 - knightGuard * 0.28;
+  actor.armRight.shoulder.rotation.z = 0.34 + punchSwing * 0.08 - strafe * 0.18 + spinArc * 0.7 + blockArc * 0.42 + avalancheArc * 0.55 + cometDashArc * 0.22 + knockdownArc * 0.22 + tripArc * 0.4 - knightGuard * 0.18;
+  actor.armRight.elbow.rotation.x = 0.95 - punchSwing * 1.55 + spinArc * 0.2 + blockArc * 0.8 + skySmashArc * (actorState.skySmashDive ? 0.55 : 0.9) + avalancheArc * 1.15 + cometDashArc * 0.2 + tripArc * 0.95 - knightGuard * 0.62;
 
   if (actor.knightSword) {
-    actor.knightSword.rotation.x = selectedClass === "knight" && actor === character ? 0.08 + punchSwing * 0.28 + cometDashArc * 0.18 : 0;
-    actor.knightSword.rotation.y = selectedClass === "knight" && actor === character ? 0.1 + spinArc * 0.22 : 0;
-    actor.knightSword.rotation.z = selectedClass === "knight" && actor === character ? 0.04 + punchSwing * 0.12 : 0.04;
+    actor.knightSword.rotation.x = isPlayerKnight ? 0.32 * knightGuard + 0.08 + punchSwing * 0.28 + cometDashArc * 0.18 : 0;
+    actor.knightSword.rotation.y = isPlayerKnight ? 0.1 + spinArc * 0.22 - knightGuard * 0.12 : 0;
+    actor.knightSword.rotation.z = isPlayerKnight ? 0.04 + punchSwing * 0.12 - knightGuard * 0.16 : 0.04;
   }
 
   actor.legLeft.hip.rotation.x = walk * 0.8 * stride * strideDirection - strafe * 0.18 + airborne * 0.25;
