@@ -1080,7 +1080,6 @@ function buildCharacter(options = {}) {
     new THREE.BoxGeometry(0.12, 0.28, 0.12),
     gloveMat,
   );
-  knightSwordGrip.position.set(0, -0.84, 0.06);
   knightSwordGrip.castShadow = true;
   knightSword.add(knightSwordGrip);
 
@@ -1088,7 +1087,7 @@ function buildCharacter(options = {}) {
     new THREE.BoxGeometry(0.42, 0.08, 0.12),
     gloveMat,
   );
-  knightSwordGuard.position.set(0, -0.98, 0.06);
+  knightSwordGuard.position.set(0, -0.18, 0);
   knightSwordGuard.castShadow = true;
   knightSword.add(knightSwordGuard);
 
@@ -1096,7 +1095,7 @@ function buildCharacter(options = {}) {
     new THREE.BoxGeometry(0.12, 1.9, 0.05),
     bodyMat,
   );
-  knightSwordBlade.position.set(0, -1.95, 0.06);
+  knightSwordBlade.position.set(0, -1.15, 0);
   knightSwordBlade.castShadow = true;
   knightSword.add(knightSwordBlade);
 
@@ -1104,12 +1103,12 @@ function buildCharacter(options = {}) {
     new THREE.ConeGeometry(0.1, 0.28, 4),
     bodyMat,
   );
-  knightSwordTip.position.set(0, -3.0, 0.06);
+  knightSwordTip.position.set(0, -2.2, 0);
   knightSwordTip.rotation.z = Math.PI;
   knightSwordTip.castShadow = true;
   knightSword.add(knightSwordTip);
 
-  knightSword.position.set(0.02, 0.02, -0.02);
+  knightSword.position.set(0.02, -0.84, 0.06);
   knightSword.rotation.z = 0.04;
 
   const cape = new THREE.Mesh(
@@ -2255,9 +2254,9 @@ function updateActor(actor, actorState, input, faceTarget, dt, elapsed) {
   actor.armRight.elbow.rotation.x = 0.95 - punchSwing * 1.55 + spinArc * 0.2 + blockArc * 0.8 + skySmashArc * (actorState.skySmashDive ? 0.55 : 0.9) + avalancheArc * 1.15 + cometDashArc * 0.2 + tripArc * 0.95 - knightGuard * 0.62;
 
   if (actor.knightSword) {
-    actor.knightSword.rotation.x = isPlayerKnight ? 1.1 * knightGuard + 0.08 + punchSwing * 0.28 + cometDashArc * 0.18 : 0;
-    actor.knightSword.rotation.y = isPlayerKnight ? 0.1 + spinArc * 0.22 - knightGuard * 0.12 : 0;
-    actor.knightSword.rotation.z = isPlayerKnight ? 0.04 + punchSwing * 0.12 + knightGuard * 0.45 : 0.04;
+    actor.knightSword.rotation.x = isPlayerKnight ? 1.3 * knightGuard + 0.08 + punchSwing * 0.28 + cometDashArc * 0.18 : 0;
+    actor.knightSword.rotation.y = isPlayerKnight ? 0.1 + spinArc * 0.22 + knightGuard * 0.65 : 0;
+    actor.knightSword.rotation.z = isPlayerKnight ? 0.04 + punchSwing * 0.12 + knightGuard * 0.75 : 0.04;
   }
 
   actor.legLeft.hip.rotation.x = walk * 0.8 * stride * strideDirection - strafe * 0.18 + airborne * 0.25;
@@ -2809,6 +2808,41 @@ function updateCamera(dt) {
   camera.lookAt(lookTarget);
 }
 
+function updateKnightSwordAim() {
+  if (selectedClass !== "knight" || !character.knightSword) return;
+  if (
+    state.isPunching ||
+    state.isSpinning ||
+    state.isAvalanching ||
+    state.isCometDashing ||
+    state.isBlocking ||
+    state.skySmashActive ||
+    state.knockdownTimer > 0 ||
+    state.tripTimer > 0
+  ) {
+    return;
+  }
+
+  scene.updateMatrixWorld(true);
+
+  const swordPosition = new THREE.Vector3();
+  const cameraForward = new THREE.Vector3();
+  const aimTarget = new THREE.Vector3();
+  const aimDirection = new THREE.Vector3();
+  const parentQuaternion = new THREE.Quaternion();
+  const swordQuaternion = new THREE.Quaternion();
+  const bladeAxis = new THREE.Vector3(0, -1, 0);
+
+  character.knightSword.getWorldPosition(swordPosition);
+  camera.getWorldDirection(cameraForward);
+  aimTarget.copy(camera.position).addScaledVector(cameraForward, 90);
+  aimDirection.copy(aimTarget).sub(swordPosition).normalize();
+
+  swordQuaternion.setFromUnitVectors(bladeAxis, aimDirection);
+  character.knightSword.parent.getWorldQuaternion(parentQuaternion);
+  character.knightSword.quaternion.copy(parentQuaternion.invert().multiply(swordQuaternion));
+}
+
 function updateCountdown(dt) {
   if (!state.gameStarted || state.roundActive || state.gameOver) return;
 
@@ -2851,6 +2885,7 @@ function animate() {
   }
   if (state.gameStarted && !state.gameOver) {
     updateCamera(dt);
+    updateKnightSwordAim();
   }
   updateCrosshair();
   updateHealthBars();
