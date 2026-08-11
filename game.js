@@ -409,33 +409,40 @@ function applySelectedClass() {
 
 function applyCpuClass() {
   const isMage = cpuClass === "mage";
-  cpuCharacter.bodyMat.color.setHex(isMage ? 0x895cff : 0x4e7dff);
-  cpuCharacter.darkMat.color.setHex(isMage ? 0x25124e : 0x162347);
-  cpuCharacter.gloveMat.color.setHex(isMage ? 0xe6d9ff : 0x0d1020);
-  cpuCharacter.mouthMat.color.setHex(isMage ? 0x6f59c5 : 0x445a9a);
-  cpuCharacter.hair.visible = !isMage;
+  const isKnight = cpuClass === "knight";
+  cpuCharacter.bodyMat.color.setHex(isMage ? 0x895cff : isKnight ? 0x9fb0d2 : 0x4e7dff);
+  cpuCharacter.darkMat.color.setHex(isMage ? 0x25124e : isKnight ? 0x253756 : 0x162347);
+  cpuCharacter.gloveMat.color.setHex(isMage ? 0xe6d9ff : isKnight ? 0xe0b85a : 0x0d1020);
+  cpuCharacter.mouthMat.color.setHex(isMage ? 0x6f59c5 : isKnight ? 0x5c6370 : 0x445a9a);
+  cpuCharacter.hair.visible = !isMage && !isKnight;
   cpuCharacter.mageHat.visible = isMage;
   cpuCharacter.mageBrim.visible = isMage;
   cpuCharacter.cape.visible = isMage;
   cpuCharacter.robeFront.visible = isMage;
-  cpuCharacter.knightHelm.visible = false;
-  cpuCharacter.knightVisor.visible = false;
-  cpuCharacter.knightPlume.visible = false;
-  cpuCharacter.knightPauldronLeft.visible = false;
-  cpuCharacter.knightPauldronRight.visible = false;
+  cpuCharacter.knightHelm.visible = isKnight;
+  cpuCharacter.knightVisor.visible = isKnight;
+  cpuCharacter.knightPlume.visible = isKnight;
+  cpuCharacter.knightPauldronLeft.visible = isKnight;
+  cpuCharacter.knightPauldronRight.visible = isKnight;
   cpuCharacter.knightShield.visible = false;
-  cpuCharacter.knightSword.visible = false;
-  cpuCharacter.windRingLow.material.color.setHex(isMage ? 0xd6b7ff : 0xc9e3ff);
-  cpuCharacter.windRingHigh.material.color.setHex(isMage ? 0xd6b7ff : 0xc9e3ff);
-  cpuCharacter.windSlash.material.color.setHex(isMage ? 0xf2ddff : 0xc9e3ff);
+  cpuCharacter.knightSword.visible = isKnight;
+  cpuCharacter.windRingLow.material.color.setHex(isMage ? 0xd6b7ff : isKnight ? 0xffd36d : 0xc9e3ff);
+  cpuCharacter.windRingHigh.material.color.setHex(isMage ? 0xd6b7ff : isKnight ? 0xffd36d : 0xc9e3ff);
+  cpuCharacter.windSlash.material.color.setHex(isMage ? 0xf2ddff : isKnight ? 0xfff2b4 : 0xc9e3ff);
+}
+
+function getCpuClassLabel() {
+  if (cpuClass === "mage") return "CPU Mage";
+  if (cpuClass === "knight") return "CPU Knight";
+  return "CPU Warrior";
 }
 
 function refillCpuClassBag() {
-  cpuClassBag = Math.random() < 0.5 ? ["mage", "warrior"] : ["warrior", "mage"];
+  cpuClassBag = ["warrior", "knight", "mage"].sort(() => Math.random() - 0.5);
 }
 
 function rollCpuClass() {
-  if (selectedCpuSetting === "mage" || selectedCpuSetting === "warrior") {
+  if (selectedCpuSetting === "mage" || selectedCpuSetting === "warrior" || selectedCpuSetting === "knight") {
     cpuClass = selectedCpuSetting;
   } else {
     if (cpuClassBag.length === 0) {
@@ -445,7 +452,7 @@ function rollCpuClass() {
   }
   applyCpuClass();
   if (enemyHudName) {
-    enemyHudName.textContent = cpuClass === "mage" ? "CPU Mage" : "CPU Warrior";
+    enemyHudName.textContent = getCpuClassLabel();
   }
 }
 
@@ -638,7 +645,7 @@ function updateEnemyHud() {
 
   enemyHud.hidden = false;
   if (enemyHudName) {
-    enemyHudName.textContent = cpuClass === "mage" ? "CPU Mage" : "CPU Warrior";
+    enemyHudName.textContent = getCpuClassLabel();
   }
   const x = (world.x * 0.5 + 0.5) * window.innerWidth;
   const y = (-world.y * 0.5 + 0.5) * window.innerHeight;
@@ -726,10 +733,11 @@ if (cpuSelect) {
   cpuSelect.addEventListener("click", (event) => {
     const button = event.target.closest("[data-cpu]");
     if (!button) return;
-    selectedCpuSetting = button.dataset.cpu === "mage"
-      ? "mage"
-      : button.dataset.cpu === "warrior"
-        ? "warrior"
+    selectedCpuSetting =
+      button.dataset.cpu === "mage" ||
+      button.dataset.cpu === "warrior" ||
+      button.dataset.cpu === "knight"
+        ? button.dataset.cpu
         : "random";
     cpuClassBag = [];
     cpuButtons.forEach((entry) => {
@@ -2224,13 +2232,15 @@ function updateActor(actor, actorState, input, faceTarget, dt, elapsed) {
   const skySmashHoverGlow = usingSkySmash && !actorState.skySmashDive
     ? 0.35 + Math.min(actorState.skySmashCharge / 18, 0.65)
     : 0;
-  const isPlayerKnight = selectedClass === "knight" && actor === character;
+  const isKnightActor =
+    (actor === character && selectedClass === "knight") ||
+    (actor === cpuCharacter && cpuClass === "knight");
   const actionPose = THREE.MathUtils.clamp(
     punchSwing + spinArc + blockArc + avalancheArc + cometDashArc + skySmashArc + knockdownArc + tripArc,
     0,
     1,
   );
-  const knightGuard = isPlayerKnight ? 1 - actionPose * 0.72 : 0;
+  const knightGuard = isKnightActor ? 1 - actionPose * 0.72 : 0;
 
   actor.hips.position.y = 1.15 + idleBob + Math.abs(walk) * 0.08 * stride + airborne * 0.1 - knockdownArc * 0.7 - tripArc * 0.38;
   actor.hips.rotation.z =
@@ -2254,9 +2264,9 @@ function updateActor(actor, actorState, input, faceTarget, dt, elapsed) {
   actor.armRight.elbow.rotation.x = 0.95 - punchSwing * 1.55 + spinArc * 0.2 + blockArc * 0.8 + skySmashArc * (actorState.skySmashDive ? 0.55 : 0.9) + avalancheArc * 1.15 + cometDashArc * 0.2 + tripArc * 0.95 - knightGuard * 0.62;
 
   if (actor.knightSword) {
-    actor.knightSword.rotation.x = isPlayerKnight ? 1.3 * knightGuard + 0.08 + punchSwing * 0.28 + cometDashArc * 0.18 : 0;
-    actor.knightSword.rotation.y = isPlayerKnight ? 0.1 + spinArc * 0.22 + knightGuard * 0.65 : 0;
-    actor.knightSword.rotation.z = isPlayerKnight ? 0.04 + punchSwing * 0.12 + knightGuard * 0.75 : 0.04;
+    actor.knightSword.rotation.x = isKnightActor ? 1.3 * knightGuard + 0.08 + punchSwing * 0.28 + cometDashArc * 0.18 : 0;
+    actor.knightSword.rotation.y = isKnightActor ? 0.1 + spinArc * 0.22 + knightGuard * 0.65 : 0;
+    actor.knightSword.rotation.z = isKnightActor ? 0.04 + punchSwing * 0.12 + knightGuard * 0.75 : 0.04;
   }
 
   actor.legLeft.hip.rotation.x = walk * 0.8 * stride * strideDirection - strafe * 0.18 + airborne * 0.25;
@@ -2495,6 +2505,178 @@ function castCpuThunderBurst() {
   }
 }
 
+function castCpuKnightGuardBreak() {
+  cpuState.fireballCooldown = 1.45;
+  cpuState.isPunching = true;
+  cpuState.punchTimer = cpuState.punchDuration;
+  cpuState.blockEffectTimer = 0.18;
+
+  const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(cpuCharacter.root.quaternion).normalize();
+  const toPlayer = character.root.position.clone().sub(cpuCharacter.root.position);
+  const distance = toPlayer.length();
+  const planar = toPlayer.clone();
+  planar.y = 0;
+  if (distance <= 2.8 && planar.lengthSq() > 0.0001) {
+    planar.normalize();
+    if (forward.dot(planar) >= 0.64) {
+      const landed = applyHit(cpuCharacter, character, state, scaleCpuDamage(24));
+      if (landed) {
+        state.velocity.addScaledVector(planar, 4.1);
+        state.stunTimer = Math.max(state.stunTimer, 0.72);
+      }
+    }
+  }
+
+  const root = new THREE.Group();
+  const stab = new THREE.Mesh(
+    new THREE.BoxGeometry(0.22, 1.6, 0.08),
+    new THREE.MeshBasicMaterial({ color: 0xffefc8, transparent: true, opacity: 0.72 }),
+  );
+  stab.rotation.x = Math.PI / 2;
+  const shock = new THREE.Mesh(
+    new THREE.RingGeometry(0.24, 0.62, 20),
+    new THREE.MeshBasicMaterial({
+      color: 0xffc867,
+      transparent: true,
+      opacity: 0.62,
+      side: THREE.DoubleSide,
+    }),
+  );
+  shock.rotation.x = Math.PI / 2;
+  shock.position.z = -0.78;
+  root.add(stab);
+  root.add(shock);
+  root.position.copy(cpuCharacter.root.position).add(new THREE.Vector3(0, 1.42, 0)).addScaledVector(forward, 1.15);
+  root.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, -1), forward);
+  scene.add(root);
+  fireballs.push({
+    type: "knightStab",
+    root,
+    stab,
+    shock,
+    forward,
+    speed: 1.8,
+    life: 0.22,
+    maxLife: 0.22,
+  });
+}
+
+function castCpuKnightRoyalCleave() {
+  cpuState.avalancheCooldown = 1.9;
+  cpuState.isPunching = true;
+  cpuState.punchTimer = cpuState.punchDuration * 0.9;
+  cpuState.blockEffectTimer = 0.22;
+
+  const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(cpuCharacter.root.quaternion).normalize();
+  const toPlayer = character.root.position.clone().sub(cpuCharacter.root.position);
+  const distance = toPlayer.length();
+  const planar = toPlayer.clone();
+  planar.y = 0;
+  if (distance <= 3.85 && planar.lengthSq() > 0.0001) {
+    planar.normalize();
+    if (forward.dot(planar) >= 0.08) {
+      const landed = applyHit(cpuCharacter, character, state, scaleCpuDamage(32));
+      if (landed) {
+        state.velocity.addScaledVector(planar, 4.7);
+        state.stunTimer = Math.max(state.stunTimer, 0.82);
+      }
+    }
+  }
+
+  const root = new THREE.Group();
+  const arc = new THREE.Mesh(
+    new THREE.RingGeometry(1.1, 2.28, 40, 1, Math.PI * 0.02, Math.PI * 1.1),
+    new THREE.MeshBasicMaterial({
+      color: 0xffecad,
+      transparent: true,
+      opacity: 0.86,
+      side: THREE.DoubleSide,
+    }),
+  );
+  arc.rotation.set(Math.PI / 2, 0, -Math.PI / 4);
+  const ring = new THREE.Mesh(
+    new THREE.TorusGeometry(1.2, 0.08, 10, 30),
+    new THREE.MeshBasicMaterial({ color: 0xffc55f, transparent: true, opacity: 0.68 }),
+  );
+  ring.rotation.x = Math.PI / 2;
+  ring.scale.set(1.25, 1, 1.25);
+  root.add(arc);
+  root.add(ring);
+  root.position.copy(cpuCharacter.root.position).add(new THREE.Vector3(0, 1.56, 0)).addScaledVector(forward, 1.4);
+  root.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, -1), forward);
+  scene.add(root);
+  fireballs.push({
+    type: "knightCleave",
+    root,
+    arc,
+    ring,
+    forward,
+    speed: 1.6,
+    life: 0.28,
+    maxLife: 0.28,
+  });
+}
+
+function castCpuKnightKingsQuake() {
+  cpuState.thunderCooldown = 3.1;
+  cpuState.isPunching = true;
+  cpuState.punchTimer = cpuState.punchDuration * 0.72;
+  cpuState.blockEffectTimer = 0.34;
+
+  const toPlayer = character.root.position.clone().sub(cpuCharacter.root.position);
+  const distance = toPlayer.length();
+  if (distance <= 3.15) {
+    const hitLanded = applyHit(cpuCharacter, character, state, scaleCpuDamage(30));
+    if (hitLanded) {
+      const knockback = character.root.position.clone().sub(cpuCharacter.root.position);
+      knockback.y = 0;
+      if (knockback.lengthSq() > 0.0001) {
+        knockback.normalize();
+        state.velocity.addScaledVector(knockback, 4.4);
+      }
+      state.stunTimer = Math.max(state.stunTimer, 0.9);
+      state.knockdownTimer = Math.max(state.knockdownTimer, 0.9);
+    }
+  }
+
+  const root = new THREE.Group();
+  const disc = new THREE.Mesh(
+    new THREE.CircleGeometry(0.9, 28),
+    new THREE.MeshBasicMaterial({
+      color: 0xffd46a,
+      transparent: true,
+      opacity: 0.45,
+      side: THREE.DoubleSide,
+    }),
+  );
+  disc.rotation.x = -Math.PI / 2;
+  disc.position.y = 0.05;
+  root.add(disc);
+
+  const ring = new THREE.Mesh(
+    new THREE.RingGeometry(0.85, 1.45, 28),
+    new THREE.MeshBasicMaterial({
+      color: 0xfff1b5,
+      transparent: true,
+      opacity: 0.72,
+      side: THREE.DoubleSide,
+    }),
+  );
+  ring.rotation.x = -Math.PI / 2;
+  ring.position.y = 0.07;
+  root.add(ring);
+
+  root.position.copy(cpuCharacter.root.position);
+  scene.add(root);
+  thunderBursts.push({
+    type: "knightQuake",
+    root,
+    ring,
+    life: 0.42,
+    maxLife: 0.42,
+  });
+}
+
 function tryCpuAvalanche() {
   const toPlayer = character.root.position.clone().sub(cpuCharacter.root.position);
   const distance = toPlayer.length();
@@ -2633,6 +2815,20 @@ function updateCpu(dt, elapsed) {
         cpuState.stamina = Math.max(0, cpuState.stamina - 24);
         castCpuThunderBurst();
         cpuState.aiSpecialCooldown = 2.2 * cpuDifficulty.specialCooldownScale;
+      }
+    } else if (cpuClass === "knight") {
+      if (distance <= 2.8 && cpuState.fireballCooldown <= 0 && cpuState.stamina >= 18) {
+        cpuState.stamina = Math.max(0, cpuState.stamina - 18);
+        castCpuKnightGuardBreak();
+        cpuState.aiSpecialCooldown = 1.5 * cpuDifficulty.specialCooldownScale;
+      } else if (distance <= 3.85 && cpuState.avalancheCooldown <= 0 && cpuState.stamina >= 28) {
+        cpuState.stamina = Math.max(0, cpuState.stamina - 28);
+        castCpuKnightRoyalCleave();
+        cpuState.aiSpecialCooldown = 2 * cpuDifficulty.specialCooldownScale;
+      } else if (distance <= 3.15 && cpuState.thunderCooldown <= 0 && cpuState.stamina >= 34) {
+        cpuState.stamina = Math.max(0, cpuState.stamina - 34);
+        castCpuKnightKingsQuake();
+        cpuState.aiSpecialCooldown = 2.35 * cpuDifficulty.specialCooldownScale;
       }
     } else if (distance <= 2.95 && cpuState.avalancheCooldown <= 0 && cpuState.stamina >= 26) {
       cpuState.stamina = Math.max(0, cpuState.stamina - 26);
