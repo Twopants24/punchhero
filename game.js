@@ -1455,6 +1455,12 @@ function triggerMageTeleportEscape() {
   targetPosition.y = 0;
 
   character.root.position.copy(targetPosition);
+  if (selectedMode !== "training") {
+    const opponentDirection = cpuCharacter.root.position.clone().sub(targetPosition);
+    opponentDirection.y = 0;
+    state.facing = Math.atan2(-opponentDirection.x, -opponentDirection.z);
+    character.root.rotation.y = state.facing;
+  }
   state.velocity.set(0, 0, 0);
   state.verticalVelocity = 0;
   state.isGrounded = true;
