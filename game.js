@@ -466,13 +466,31 @@ function showGameOver(title, text) {
 }
 
 function startGame() {
+  clearActiveEffects();
   applyCpuDifficulty(true);
+  resetActorState(state, character.root.position, 0);
+  resetActorState(cpuState, cpuCharacter.root.position, Math.PI);
+  clearActorEffects(character);
+  clearActorEffects(cpuCharacter);
+  character.root.position.copy(playerSpawn);
+  cpuCharacter.root.position.copy(selectedMode === "training" ? new THREE.Vector3(999, 0, 999) : cpuSpawn);
+  character.root.rotation.y = state.facing;
+  cpuCharacter.root.rotation.y = cpuState.facing;
+  cpuState.aiJumpCooldown = 1.5;
+  cpuState.aiPunchCooldown = 0.3;
+  state.gameOver = false;
   state.gameStarted = true;
   state.roundActive = false;
   state.paused = false;
   state.countdownValue = 3;
   state.countdownTimer = 0;
   rollCpuClass();
+  if (selectedMode !== "training") {
+    const opponentDirection = cpuCharacter.root.position.clone().sub(character.root.position);
+    opponentDirection.y = 0;
+    state.cameraYaw = Math.atan2(-opponentDirection.x, -opponentDirection.z);
+  }
+  if (gameOver) gameOver.hidden = true;
   if (startMenu) startMenu.hidden = true;
   if (pauseMenu) pauseMenu.hidden = true;
   if (controlsModal) controlsModal.hidden = true;
@@ -511,6 +529,14 @@ function clearActiveEffects() {
       child.material.dispose();
     });
   }
+}
+
+function clearActorEffects(actor) {
+  actor.blockBurst.visible = false;
+  actor.windGroup.visible = false;
+  actor.windRingLow.material.opacity = 0;
+  actor.windRingHigh.material.opacity = 0;
+  actor.windSlash.material.opacity = 0;
 }
 
 function resetActorState(actorState, position, facing = 0) {
@@ -565,6 +591,8 @@ function restartGame() {
   applyCpuDifficulty(true);
   resetActorState(state, character.root.position, 0);
   resetActorState(cpuState, cpuCharacter.root.position, Math.PI);
+  clearActorEffects(character);
+  clearActorEffects(cpuCharacter);
   character.root.position.copy(playerSpawn);
   cpuCharacter.root.position.copy(selectedMode === "training" ? new THREE.Vector3(999, 0, 999) : cpuSpawn);
   character.root.rotation.y = state.facing;
