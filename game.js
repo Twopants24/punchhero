@@ -2766,9 +2766,10 @@ function updateCpu(dt, elapsed) {
     )
   ) {
     cpuState.isBlocking = true;
-    cpuState.blockTimer = cpuState.blockDuration;
-    cpuState.blockCooldown = 1.15 * cpuDifficulty.punchCooldownScale;
-    cpuState.aiBlockWindow = 0.45;
+    // CPU blocks are brief, deliberate reactions instead of a permanent defense.
+    cpuState.blockTimer = 0.58;
+    cpuState.blockCooldown = 2.8 * cpuDifficulty.punchCooldownScale;
+    cpuState.aiBlockWindow = 1.1;
   }
 
   let desiredMove = new THREE.Vector3();
