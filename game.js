@@ -1643,11 +1643,12 @@ function applyHit(attacker, target, targetState, damage) {
     rebound.y = 0;
     if (rebound.lengthSq() > 0.0001) {
       rebound.normalize();
-      attacker.root.position.addScaledVector(rebound, 0.55);
+      attacker.root.position.addScaledVector(rebound, 3.8);
       const attackerState = attacker === cpuCharacter ? cpuState : state;
-      attackerState.velocity.addScaledVector(rebound, 9.5);
-      attackerState.stunTimer = Math.max(attackerState.stunTimer, 1.05);
-      attackerState.knockdownTimer = Math.max(attackerState.knockdownTimer, 0.95);
+      attackerState.velocity.addScaledVector(rebound, 16);
+      attackerState.verticalVelocity = Math.max(attackerState.verticalVelocity, 6.5);
+      attackerState.isGrounded = false;
+      attackerState.stunTimer = Math.max(attackerState.stunTimer, 0.3);
       attackerState.isPunching = false;
       attackerState.punchTimer = 0;
       attackerState.isRunning = false;
