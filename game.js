@@ -254,6 +254,10 @@ function createActorState() {
     tripTimer: 0,
     fireballCooldown: 0,
     thunderCooldown: 0,
+    isKingsQuaking: false,
+    kingsQuakeTimer: 0,
+    kingsQuakeDuration: 1.15,
+    kingsQuakeImpact: false,
     isBlocking: false,
     blockTimer: 0,
     blockDuration: 1,
@@ -566,6 +570,9 @@ function resetActorState(actorState, position, facing = 0) {
   actorState.tripTimer = 0;
   actorState.fireballCooldown = 0;
   actorState.thunderCooldown = 0;
+  actorState.isKingsQuaking = false;
+  actorState.kingsQuakeTimer = 0;
+  actorState.kingsQuakeImpact = false;
   actorState.isBlocking = false;
   actorState.blockTimer = 0;
   actorState.blockCooldown = 0;
@@ -818,6 +825,9 @@ window.addEventListener("keydown", (event) => {
 
   keys.add(event.code);
 
+  // King's Quake is a committed heavy swing: once raised, it must finish.
+  if (state.isKingsQuaking) return;
+
   if (event.code === "Space" && state.isGrounded) {
     state.verticalVelocity = 7.6;
     state.isGrounded = false;
@@ -893,7 +903,7 @@ window.addEventListener("keydown", (event) => {
   }
 
   if (event.code === "Digit3" && selectedClass === "knight") {
-    if (state.thunderCooldown <= 0 && !state.skySmashActive && trySpendStamina(30)) {
+    if (state.thunderCooldown <= 0 && !state.skySmashActive && !state.isKingsQuaking && trySpendStamina(48)) {
       castKnightKingsQuake();
     }
   }
@@ -1938,35 +1948,46 @@ function castKnightRoyalCleave() {
 }
 
 function castKnightKingsQuake() {
-  state.thunderCooldown = 3.1;
-  state.isPunching = true;
-  state.punchTimer = state.punchDuration * 0.72;
-  state.blockEffectTimer = 0.34;
-  updateLockStatus("King's quake!");
+  state.thunderCooldown = 5.8;
+  state.isKingsQuaking = true;
+  state.kingsQuakeTimer = state.kingsQuakeDuration;
+  state.kingsQuakeImpact = false;
+  state.isPunching = false;
+  state.punchTimer = 0;
+  state.velocity.multiplyScalar(0.08);
+  updateLockStatus("King's quake: raise the blade!");
+}
+
+function resolveKnightKingsQuake(actor, actorState) {
+  const isPlayer = actor === character;
+  const target = isPlayer ? cpuCharacter : character;
+  const targetState = isPlayer ? cpuState : state;
 
   dummies.entries.forEach((dummy) => {
-    const toDummy = dummy.root.position.clone().sub(character.root.position);
+    if (!isPlayer) return;
+    const toDummy = dummy.root.position.clone().sub(actor.root.position);
     const distance = toDummy.length();
-    if (distance > 3.2) return;
-    dummy.wobble = Math.max(dummy.wobble, 1.35);
-    dummy.hitFlash = 0.36;
-    dummy.root.position.addScaledVector(toDummy.normalize(), 0.54);
+    if (distance > 5.5) return;
+    dummy.wobble = Math.max(dummy.wobble, 2.1);
+    dummy.hitFlash = 0.55;
+    dummy.root.position.addScaledVector(toDummy.normalize(), 1.2);
   });
 
   if (selectedMode !== "training") {
-    const toCpu = cpuCharacter.root.position.clone().sub(character.root.position);
-    const distance = toCpu.length();
-    if (distance <= 3.15) {
-      const hitLanded = applyHit(character, cpuCharacter, cpuState, 30);
+    const toTarget = target.root.position.clone().sub(actor.root.position);
+    const distance = toTarget.length();
+    if (distance <= 5.5) {
+      const damage = isPlayer ? 60 : scaleCpuDamage(60);
+      const hitLanded = applyHit(actor, target, targetState, damage);
       if (hitLanded) {
-        const knockback = cpuCharacter.root.position.clone().sub(character.root.position);
+        const knockback = target.root.position.clone().sub(actor.root.position);
         knockback.y = 0;
         if (knockback.lengthSq() > 0.0001) {
           knockback.normalize();
-          cpuState.velocity.addScaledVector(knockback, 4.4);
+          targetState.velocity.addScaledVector(knockback, 8.5);
         }
-        cpuState.stunTimer = Math.max(cpuState.stunTimer, 0.9);
-        cpuState.knockdownTimer = Math.max(cpuState.knockdownTimer, 0.9);
+        targetState.stunTimer = Math.max(targetState.stunTimer, 1.25);
+        targetState.knockdownTimer = Math.max(targetState.knockdownTimer, 1.2);
       }
     }
   }
@@ -1998,15 +2019,17 @@ function castKnightKingsQuake() {
   ring.position.y = 0.07;
   root.add(ring);
 
-  root.position.copy(character.root.position);
+  root.position.copy(actor.root.position);
   scene.add(root);
   thunderBursts.push({
     type: "knightQuake",
     root,
     ring,
-    life: 0.42,
-    maxLife: 0.42,
+    life: 0.68,
+    maxLife: 0.68,
   });
+
+  spawnDirtBurst(actor.root.position, 2.25);
 }
 
 function tryAvalanche() {
@@ -2077,7 +2100,7 @@ function updateActor(actor, actorState, input, faceTarget, dt, elapsed) {
   if (actorState.isAvalanching) {
     effectiveInput.multiplyScalar(0.2);
   }
-  if (actorState.isCometDashing || knockedDown || tripped) {
+  if (actorState.isCometDashing || actorState.isKingsQuaking || knockedDown || tripped) {
     effectiveInput.set(0, 0, 0);
   }
   const isMoving = effectiveInput.lengthSq() > 0;
@@ -2236,6 +2259,21 @@ function updateActor(actor, actorState, input, faceTarget, dt, elapsed) {
     }
   }
 
+  if (actorState.isKingsQuaking) {
+    actorState.kingsQuakeTimer -= dt;
+    if (!actorState.kingsQuakeImpact && actorState.kingsQuakeTimer <= 0.08) {
+      actorState.kingsQuakeImpact = true;
+      actorState.blockEffectTimer = 0.5;
+      resolveKnightKingsQuake(actor, actorState);
+      if (actor === character) updateLockStatus("King's quake!");
+    }
+    if (actorState.kingsQuakeTimer <= 0) {
+      actorState.isKingsQuaking = false;
+      actorState.kingsQuakeTimer = 0;
+      actorState.kingsQuakeImpact = false;
+    }
+  }
+
   const idleBob = Math.sin(elapsed * 2.4) * 0.06;
   const walk = Math.sin(actorState.walkCycle);
   const walkOpp = Math.sin(actorState.walkCycle + Math.PI);
@@ -2261,6 +2299,15 @@ function updateActor(actor, actorState, input, faceTarget, dt, elapsed) {
   const spinArc = actorState.isSpinning ? Math.sin(spinProgress * Math.PI) : 0;
   const spinTurn = actorState.isSpinning ? spinProgress * Math.PI * 4.6 : 0;
   const skySmashArc = usingSkySmash ? 1 : 0;
+  const kingsQuakeProgress = actorState.isKingsQuaking
+    ? 1 - actorState.kingsQuakeTimer / actorState.kingsQuakeDuration
+    : 0;
+  const kingsQuakeLift = actorState.isKingsQuaking
+    ? Math.min(kingsQuakeProgress / 0.62, 1)
+    : 0;
+  const kingsQuakeSlam = actorState.isKingsQuaking && kingsQuakeProgress > 0.62
+    ? (kingsQuakeProgress - 0.62) / 0.38
+    : 0;
   const skySmashChargeTilt = usingSkySmash ? Math.min(actorState.skySmashCharge / 10, 1.4) : 0;
   const skySmashHoverGlow = usingSkySmash && !actorState.skySmashDive
     ? 0.35 + Math.min(actorState.skySmashCharge / 18, 0.65)
@@ -2269,7 +2316,7 @@ function updateActor(actor, actorState, input, faceTarget, dt, elapsed) {
     (actor === character && selectedClass === "knight") ||
     (actor === cpuCharacter && cpuClass === "knight");
   const actionPose = THREE.MathUtils.clamp(
-    punchSwing + spinArc + blockArc + avalancheArc + cometDashArc + skySmashArc + knockdownArc + tripArc,
+    punchSwing + spinArc + blockArc + avalancheArc + cometDashArc + skySmashArc + kingsQuakeLift + kingsQuakeSlam + knockdownArc + tripArc,
     0,
     1,
   );
@@ -2300,6 +2347,16 @@ function updateActor(actor, actorState, input, faceTarget, dt, elapsed) {
     actor.knightSword.rotation.x = isKnightActor ? 1.3 * knightGuard + 0.08 + punchSwing * 0.28 + cometDashArc * 0.18 : 0;
     actor.knightSword.rotation.y = isKnightActor ? 0.1 + spinArc * 0.22 + knightGuard * 0.65 : 0;
     actor.knightSword.rotation.z = isKnightActor ? 0.04 + punchSwing * 0.12 + knightGuard * 0.75 : 0.04;
+  }
+
+  if (isKnightActor && actorState.isKingsQuaking) {
+    const overhead = kingsQuakeLift - kingsQuakeSlam;
+    actor.torso.rotation.x = 0.05 - overhead * 0.42 + kingsQuakeSlam * 0.92;
+    actor.armLeft.shoulder.rotation.set(-0.35 - overhead * 2.15 + kingsQuakeSlam * 2.45, 0.28, -0.48);
+    actor.armLeft.elbow.rotation.x = 1.18 - overhead * 0.38 + kingsQuakeSlam * 0.42;
+    actor.armRight.shoulder.rotation.set(-0.42 - overhead * 2.25 + kingsQuakeSlam * 2.5, -0.25, 0.44);
+    actor.armRight.elbow.rotation.x = 1.04 - overhead * 0.32 + kingsQuakeSlam * 0.38;
+    actor.knightSword.rotation.set(0.35 - overhead * 1.78 + kingsQuakeSlam * 1.95, 0.06, 0.02);
   }
 
   actor.legLeft.hip.rotation.x = walk * 0.8 * stride * strideDirection - strafe * 0.18 + airborne * 0.25;
@@ -2651,63 +2708,13 @@ function castCpuKnightRoyalCleave() {
 }
 
 function castCpuKnightKingsQuake() {
-  cpuState.thunderCooldown = 3.1;
-  cpuState.isPunching = true;
-  cpuState.punchTimer = cpuState.punchDuration * 0.72;
-  cpuState.blockEffectTimer = 0.34;
-
-  const toPlayer = character.root.position.clone().sub(cpuCharacter.root.position);
-  const distance = toPlayer.length();
-  if (distance <= 3.15) {
-    const hitLanded = applyHit(cpuCharacter, character, state, scaleCpuDamage(30));
-    if (hitLanded) {
-      const knockback = character.root.position.clone().sub(cpuCharacter.root.position);
-      knockback.y = 0;
-      if (knockback.lengthSq() > 0.0001) {
-        knockback.normalize();
-        state.velocity.addScaledVector(knockback, 4.4);
-      }
-      state.stunTimer = Math.max(state.stunTimer, 0.9);
-      state.knockdownTimer = Math.max(state.knockdownTimer, 0.9);
-    }
-  }
-
-  const root = new THREE.Group();
-  const disc = new THREE.Mesh(
-    new THREE.CircleGeometry(0.9, 28),
-    new THREE.MeshBasicMaterial({
-      color: 0xffd46a,
-      transparent: true,
-      opacity: 0.45,
-      side: THREE.DoubleSide,
-    }),
-  );
-  disc.rotation.x = -Math.PI / 2;
-  disc.position.y = 0.05;
-  root.add(disc);
-
-  const ring = new THREE.Mesh(
-    new THREE.RingGeometry(0.85, 1.45, 28),
-    new THREE.MeshBasicMaterial({
-      color: 0xfff1b5,
-      transparent: true,
-      opacity: 0.72,
-      side: THREE.DoubleSide,
-    }),
-  );
-  ring.rotation.x = -Math.PI / 2;
-  ring.position.y = 0.07;
-  root.add(ring);
-
-  root.position.copy(cpuCharacter.root.position);
-  scene.add(root);
-  thunderBursts.push({
-    type: "knightQuake",
-    root,
-    ring,
-    life: 0.42,
-    maxLife: 0.42,
-  });
+  cpuState.thunderCooldown = 5.8;
+  cpuState.isKingsQuaking = true;
+  cpuState.kingsQuakeTimer = cpuState.kingsQuakeDuration;
+  cpuState.kingsQuakeImpact = false;
+  cpuState.isPunching = false;
+  cpuState.punchTimer = 0;
+  cpuState.velocity.multiplyScalar(0.08);
 }
 
 function tryCpuAvalanche() {
@@ -2859,10 +2866,10 @@ function updateCpu(dt, elapsed) {
         cpuState.stamina = Math.max(0, cpuState.stamina - 28);
         castCpuKnightRoyalCleave();
         cpuState.aiSpecialCooldown = 2 * cpuDifficulty.specialCooldownScale;
-      } else if (distance <= 3.15 && cpuState.thunderCooldown <= 0 && cpuState.stamina >= 34) {
-        cpuState.stamina = Math.max(0, cpuState.stamina - 34);
+      } else if (distance <= 5.25 && cpuState.thunderCooldown <= 0 && cpuState.stamina >= 48) {
+        cpuState.stamina = Math.max(0, cpuState.stamina - 48);
         castCpuKnightKingsQuake();
-        cpuState.aiSpecialCooldown = 2.35 * cpuDifficulty.specialCooldownScale;
+        cpuState.aiSpecialCooldown = 3.4 * cpuDifficulty.specialCooldownScale;
       }
     } else if (distance <= 2.95 && cpuState.avalancheCooldown <= 0 && cpuState.stamina >= 26) {
       cpuState.stamina = Math.max(0, cpuState.stamina - 26);
@@ -3000,9 +3007,9 @@ function updateThunderBursts(dt) {
       const pulseProgress = 1 - Math.max(burst.life, 0) / burst.maxLife;
       burst.root.children[0].material.opacity = Math.max(0, 0.45 - pulseProgress * 0.36);
       burst.root.children[0].material.transparent = true;
-      burst.root.children[0].scale.setScalar(1 + pulseProgress * 3.1);
-      burst.ring.material.opacity = Math.max(0, 0.72 - pulseProgress * 0.6);
-      burst.ring.scale.setScalar(1 + pulseProgress * 3.8);
+      burst.root.children[0].scale.setScalar(1 + pulseProgress * 5.3);
+      burst.ring.material.opacity = Math.max(0, 0.8 - pulseProgress * 0.68);
+      burst.ring.scale.setScalar(1 + pulseProgress * 6.1);
     } else {
       burst.root.children[0].material.opacity = Math.max(0, burst.life / 0.32);
       burst.root.children[0].material.transparent = true;
@@ -3045,6 +3052,7 @@ function updateKnightSwordAim() {
     state.isSpinning ||
     state.isAvalanching ||
     state.isCometDashing ||
+    state.isKingsQuaking ||
     state.isBlocking ||
     state.skySmashActive ||
     state.knockdownTimer > 0 ||
