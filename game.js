@@ -88,6 +88,9 @@ scene.add(cpuCharacter.root);
 const lockStatus = document.getElementById("lock-status");
 const crosshair = document.querySelector(".crosshair");
 const staminaFill = document.getElementById("stamina-fill");
+const shieldFill = document.getElementById("shield-fill");
+const shieldBar = document.getElementById("shield-bar");
+const shieldLabel = document.getElementById("shield-label");
 const playerHealthFill = document.getElementById("player-health-fill");
 const cpuHealthFill = document.getElementById("cpu-health-fill");
 const gameOver = document.getElementById("game-over");
@@ -263,6 +266,12 @@ function createActorState() {
     blockDuration: 1,
     blockCooldown: 0,
     blockEffectTimer: 0,
+    isShielding: false,
+    shieldDurability: 100,
+    maxShieldDurability: 100,
+    shieldCooldown: 0,
+    perfectGuardTimer: 0,
+    perfectGuardFlash: 0,
     stunTimer: 0,
     skySmashActive: false,
     skySmashDive: false,
@@ -332,7 +341,9 @@ function updateLockStatus(message) {
 function updateHudForClass() {
   if (hintE) hintE.textContent = "Attack: E";
   if (hintQ) hintQ.textContent = "Spin Attack: Q";
-  if (hintC) hintC.textContent = "Timed Block: C";
+  if (hintC) hintC.textContent = selectedClass === "knight" ? "Shield Guard: Hold C + Shift parry" : "Timed Block: C";
+  if (shieldBar) shieldBar.hidden = selectedClass !== "knight";
+  if (shieldLabel) shieldLabel.hidden = selectedClass !== "knight";
 
   if (selectedClass === "mage") {
     if (hint1) hint1.textContent = "Arcane Burst: 1";
@@ -409,6 +420,7 @@ function applySelectedClass() {
   character.windRingHigh.material.color.setHex(isMage ? 0xd6a4ff : isKnight ? 0xffd36d : 0xd8f4ff);
   character.windSlash.material.color.setHex(isMage ? 0xf7d2ff : isKnight ? 0xfff2b4 : 0xd8f4ff);
   updateHudForClass();
+  updateShieldBar();
 }
 
 function applyCpuClass() {
@@ -577,6 +589,11 @@ function resetActorState(actorState, position, facing = 0) {
   actorState.blockTimer = 0;
   actorState.blockCooldown = 0;
   actorState.blockEffectTimer = 0;
+  actorState.isShielding = false;
+  actorState.shieldDurability = actorState.maxShieldDurability;
+  actorState.shieldCooldown = 0;
+  actorState.perfectGuardTimer = 0;
+  actorState.perfectGuardFlash = 0;
   actorState.stunTimer = 0;
   actorState.skySmashActive = false;
   actorState.skySmashDive = false;
@@ -621,6 +638,7 @@ function restartGame() {
   }
   updateHealthBars();
   updateStaminaBar();
+  updateShieldBar();
   applySelectedMode();
   updateLockStatus("Round starts in...");
 }
@@ -659,6 +677,7 @@ function returnToStartMenu() {
   if (startMenu) startMenu.hidden = false;
   updateHealthBars();
   updateStaminaBar();
+  updateShieldBar();
   applySelectedMode();
   updateLockStatus("Camera: Hold click and drag to look");
 }
@@ -908,10 +927,29 @@ window.addEventListener("keydown", (event) => {
     }
   }
 
-  if (event.code === "KeyC" && state.blockCooldown <= 0 && !state.isBlocking) {
-    state.isBlocking = true;
-    state.blockTimer = state.blockDuration;
-    state.blockCooldown = 1.2;
+  if (event.code === "KeyC") {
+    if (selectedClass === "knight") {
+      if (state.shieldCooldown <= 0 && state.shieldDurability > 0) {
+        state.isShielding = true;
+      } else {
+        updateLockStatus("Shield is recharging");
+      }
+    } else if (state.blockCooldown <= 0 && !state.isBlocking) {
+      state.isBlocking = true;
+      state.blockTimer = state.blockDuration;
+      state.blockCooldown = 1.2;
+    }
+  }
+
+  if (
+    (event.code === "ShiftLeft" || event.code === "ShiftRight") &&
+    selectedClass === "knight" &&
+    state.isShielding &&
+    !event.repeat
+  ) {
+    state.perfectGuardTimer = 0.16;
+    state.blockEffectTimer = 0.1;
+    updateLockStatus("Perfect guard window!");
   }
 
   if (event.code === "KeyQ" && state.spinCooldown <= 0 && !state.isSpinning && trySpendStamina(14)) {
@@ -924,6 +962,7 @@ window.addEventListener("keydown", (event) => {
 
 window.addEventListener("keyup", (event) => {
   keys.delete(event.code);
+  if (event.code === "KeyC") state.isShielding = false;
 });
 
 window.addEventListener("mouseup", () => {
@@ -1433,6 +1472,21 @@ function updateStaminaBar() {
     ratio < 0.25 ? "linear-gradient(90deg, #ff7a6b, #ffb46b)" : "linear-gradient(90deg, #66e08a, #ffd15f)";
 }
 
+function updateShieldBar() {
+  if (!shieldFill || !shieldBar || !shieldLabel) return;
+  const isKnight = selectedClass === "knight";
+  shieldBar.hidden = !isKnight;
+  shieldLabel.hidden = !isKnight;
+  if (!isKnight) return;
+
+  const ratio = THREE.MathUtils.clamp(state.shieldDurability / state.maxShieldDurability, 0, 1);
+  shieldFill.style.transform = `scaleX(${ratio})`;
+  shieldFill.classList.toggle("shield__fill--broken", state.shieldCooldown > 0);
+  shieldLabel.textContent = state.shieldCooldown > 0
+    ? `Shield recharging ${state.shieldCooldown.toFixed(1)}s`
+    : `Shield ${Math.ceil(state.shieldDurability)}`;
+}
+
 function trySpendStamina(cost) {
   if (state.stamina < cost) {
     updateLockStatus("Need more stamina");
@@ -1559,20 +1613,51 @@ function applyHit(attacker, target, targetState, damage) {
     target === cpuCharacter && attacker === character
       ? scaleDamageAgainstCpu(damage)
       : damage;
-  const wasBlocked = targetState.isBlocking;
-  const blockedDamage = wasBlocked ? Math.ceil(adjustedDamage * 0.15) : adjustedDamage;
+  const shieldGuard = targetState.isShielding;
+  const wasBlocked = targetState.isBlocking || shieldGuard;
+  const perfectGuard = shieldGuard && targetState.perfectGuardTimer > 0;
+  const blockedDamage = shieldGuard ? 0 : wasBlocked ? Math.ceil(adjustedDamage * 0.15) : adjustedDamage;
   targetState.hp = Math.max(0, targetState.hp - blockedDamage);
   targetState.hitCooldown = 0.45;
   if (wasBlocked) {
-    targetState.blockEffectTimer = 0.24;
+    targetState.blockEffectTimer = perfectGuard ? 0.55 : 0.24;
+  }
+  if (shieldGuard) {
+    targetState.shieldDurability = Math.max(0, targetState.shieldDurability - Math.max(12, adjustedDamage * 0.9));
+    if (targetState.shieldDurability <= 0) {
+      targetState.isShielding = false;
+      targetState.shieldCooldown = 4.5;
+      targetState.perfectGuardTimer = 0;
+      if (target === character) updateLockStatus("Shield shattered! Recharging...");
+    }
+    if (target === character) updateShieldBar();
   }
   const knockback = target.root.position.clone().sub(attacker.root.position).normalize();
-  const knockbackScale = wasBlocked ? 0.12 : 0.35;
-  const velocityScale = wasBlocked ? 0.45 : 1.4;
+  const knockbackScale = wasBlocked ? 0.06 : 0.35;
+  const velocityScale = wasBlocked ? 0.18 : 1.4;
   target.root.position.addScaledVector(knockback, knockbackScale);
   targetState.velocity.addScaledVector(knockback, velocityScale);
 
-  if (wasBlocked && attacker === cpuCharacter && target === character && cpuState.hp > 0) {
+  if (perfectGuard && attacker.root.position !== target.root.position) {
+    const rebound = attacker.root.position.clone().sub(target.root.position);
+    rebound.y = 0;
+    if (rebound.lengthSq() > 0.0001) {
+      rebound.normalize();
+      attacker.root.position.addScaledVector(rebound, 0.55);
+      const attackerState = attacker === cpuCharacter ? cpuState : state;
+      attackerState.velocity.addScaledVector(rebound, 9.5);
+      attackerState.stunTimer = Math.max(attackerState.stunTimer, 1.05);
+      attackerState.knockdownTimer = Math.max(attackerState.knockdownTimer, 0.95);
+      attackerState.isPunching = false;
+      attackerState.punchTimer = 0;
+      attackerState.isRunning = false;
+    }
+    targetState.perfectGuardTimer = 0;
+    targetState.perfectGuardFlash = 0.5;
+    if (target === character) updateLockStatus("Perfect guard!");
+  }
+
+  if (wasBlocked && !shieldGuard && attacker === cpuCharacter && target === character && cpuState.hp > 0) {
     cpuState.stunTimer = Math.max(cpuState.stunTimer, 0.8);
     cpuState.isPunching = false;
     cpuState.punchTimer = 0;
@@ -2100,7 +2185,7 @@ function updateActor(actor, actorState, input, faceTarget, dt, elapsed) {
   if (actorState.isAvalanching) {
     effectiveInput.multiplyScalar(0.2);
   }
-  if (actorState.isCometDashing || actorState.isKingsQuaking || knockedDown || tripped) {
+  if (actorState.isCometDashing || actorState.isKingsQuaking || actorState.isShielding || knockedDown || tripped) {
     effectiveInput.set(0, 0, 0);
   }
   const isMoving = effectiveInput.lengthSq() > 0;
@@ -2170,6 +2255,21 @@ function updateActor(actor, actorState, input, faceTarget, dt, elapsed) {
   actorState.thunderCooldown = Math.max(0, actorState.thunderCooldown - dt);
   actorState.blockCooldown = Math.max(0, actorState.blockCooldown - dt);
   actorState.blockEffectTimer = Math.max(0, actorState.blockEffectTimer - dt);
+  actorState.perfectGuardTimer = Math.max(0, actorState.perfectGuardTimer - dt);
+  actorState.perfectGuardFlash = Math.max(0, actorState.perfectGuardFlash - dt);
+  if (actor === character && selectedClass === "knight") {
+    if (actorState.shieldCooldown > 0) {
+      actorState.shieldCooldown = Math.max(0, actorState.shieldCooldown - dt);
+      if (actorState.shieldCooldown === 0) {
+        actorState.shieldDurability = actorState.maxShieldDurability;
+        updateLockStatus("Shield restored");
+      }
+    }
+    if (!keys.has("KeyC") || actorState.shieldCooldown > 0) {
+      actorState.isShielding = false;
+    }
+    updateShieldBar();
+  }
   actorState.stunTimer = Math.max(0, actorState.stunTimer - dt);
   actorState.knockdownTimer = Math.max(0, actorState.knockdownTimer - dt);
   actorState.tripTimer = Math.max(0, actorState.tripTimer - dt);
@@ -2295,6 +2395,7 @@ function updateActor(actor, actorState, input, faceTarget, dt, elapsed) {
   const knockdownArc = knockedDown ? Math.sin((actorState.knockdownTimer / 1.2) * Math.PI) : 0;
   const tripArc = tripped ? Math.sin((actorState.tripTimer / 0.9) * Math.PI) : 0;
   const blockArc = actorState.isBlocking ? Math.sin((1 - actorState.blockTimer / actorState.blockDuration) * Math.PI) : 0;
+  const shieldArc = actorState.isShielding ? 1 : 0;
   const spinProgress = actorState.isSpinning ? 1 - actorState.spinTimer / actorState.spinDuration : 0;
   const spinArc = actorState.isSpinning ? Math.sin(spinProgress * Math.PI) : 0;
   const spinTurn = actorState.isSpinning ? spinProgress * Math.PI * 4.6 : 0;
@@ -2316,7 +2417,7 @@ function updateActor(actor, actorState, input, faceTarget, dt, elapsed) {
     (actor === character && selectedClass === "knight") ||
     (actor === cpuCharacter && cpuClass === "knight");
   const actionPose = THREE.MathUtils.clamp(
-    punchSwing + spinArc + blockArc + avalancheArc + cometDashArc + skySmashArc + kingsQuakeLift + kingsQuakeSlam + knockdownArc + tripArc,
+    punchSwing + spinArc + blockArc + shieldArc + avalancheArc + cometDashArc + skySmashArc + kingsQuakeLift + kingsQuakeSlam + knockdownArc + tripArc,
     0,
     1,
   );
@@ -2359,6 +2460,19 @@ function updateActor(actor, actorState, input, faceTarget, dt, elapsed) {
     actor.knightSword.rotation.set(0.35 - overhead * 1.78 + kingsQuakeSlam * 1.95, 0.06, 0.02);
   }
 
+  actor.knightShield.visible = isKnightActor && actorState.isShielding;
+  if (isKnightActor && actorState.isShielding) {
+    // Shield-first stance: left arm presents the shield, right hand keeps the sword ready.
+    actor.torso.rotation.x = 0.1;
+    actor.torso.rotation.y = 0.1;
+    actor.armLeft.shoulder.rotation.set(-0.48, 0.2, -0.72);
+    actor.armLeft.elbow.rotation.x = 1.22;
+    actor.armRight.shoulder.rotation.set(-0.86, -0.18, 0.25);
+    actor.armRight.elbow.rotation.x = 0.9;
+    actor.knightSword.rotation.set(0.86, 0.12, 0.12);
+    actor.knightShield.rotation.z = 0.04;
+  }
+
   actor.legLeft.hip.rotation.x = walk * 0.8 * stride * strideDirection - strafe * 0.18 + airborne * 0.25;
   actor.legLeft.hip.rotation.z = -strafe * 0.14;
   actor.legLeft.knee.rotation.x = Math.max(0, -walk * strideDirection) * 0.65 * stride + airborne * 0.35;
@@ -2369,14 +2483,15 @@ function updateActor(actor, actorState, input, faceTarget, dt, elapsed) {
   actor.root.rotation.y = actorState.facing + spinTurn;
 
   const blockFlash = actorState.blockEffectTimer > 0 ? actorState.blockEffectTimer / 0.24 : 0;
+  const perfectGuardFlash = actorState.perfectGuardFlash / 0.5;
   const procFlash = actorState.skySmashProcFlash > 0 ? actorState.skySmashProcFlash / 0.75 : 0;
-  actor.blockBurst.visible = blockFlash > 0 || procFlash > 0;
+  actor.blockBurst.visible = blockFlash > 0 || procFlash > 0 || perfectGuardFlash > 0;
   if (actor.blockBurst.visible) {
-    const flashStrength = Math.max(blockFlash * 0.9, procFlash * 0.95);
+    const flashStrength = Math.max(blockFlash * 0.9, procFlash * 0.95, perfectGuardFlash);
     actor.blockBurst.material.opacity = flashStrength;
-    actor.blockBurst.material.color.setHex(procFlash > blockFlash ? 0xfff37a : 0x9ce9ff);
-    actor.blockBurst.rotation.z = elapsed * (procFlash > blockFlash ? 16 : 10);
-    actor.blockBurst.scale.setScalar(1 + (1 - Math.max(blockFlash, procFlash)) * (procFlash > blockFlash ? 2.1 : 1.4));
+    actor.blockBurst.material.color.setHex(perfectGuardFlash > Math.max(procFlash, blockFlash) ? 0xfff3a3 : procFlash > blockFlash ? 0xfff37a : 0x9ce9ff);
+    actor.blockBurst.rotation.z = elapsed * (perfectGuardFlash > 0 ? 28 : procFlash > blockFlash ? 16 : 10);
+    actor.blockBurst.scale.setScalar(1 + (1 - Math.max(blockFlash, procFlash, perfectGuardFlash)) * (perfectGuardFlash > 0 ? 3.2 : procFlash > blockFlash ? 2.1 : 1.4));
   }
 
   actor.windGroup.visible = spinArc > 0.01 || usingSkySmash;
@@ -2447,7 +2562,7 @@ function updateCharacter(dt, elapsed) {
   const wantsRun = keys.has("ShiftLeft") || keys.has("ShiftRight");
 
   state.isRunning =
-    !state.skySmashActive && wantsRun && isMoving && state.isGrounded;
+    !state.skySmashActive && !state.isShielding && wantsRun && isMoving && state.isGrounded;
   updateActor(character, state, input, state.cameraYaw, dt, elapsed);
   updateStaminaBar();
 }

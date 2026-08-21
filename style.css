@@ -483,6 +483,18 @@ canvas {
     background 150ms ease;
 }
 
+.shield__fill {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #8fa9c7, #e4f3ff);
+  transition: width 100ms linear, background 160ms ease;
+}
+
+.shield__fill--broken {
+  background: linear-gradient(90deg, #754d4d, #bc7460);
+}
+
 .crosshair {
   position: fixed;
   top: 50%;
